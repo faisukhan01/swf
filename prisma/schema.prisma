@@ -1,9 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// Shop With Faisu!! — Prisma schema
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,20 +8,69 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
+model AdminUser {
   id        String   @id @default(cuid())
   email     String   @unique
+  password  String // bcrypt hash
   name      String?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+// Singleton row holding brand + theme config
+model AppConfig {
+  id              String   @id @default("singleton")
+  appName         String   @default("Shop With Faisu!!")
+  tagline         String   @default("Shop smart, live better")
+  logoUrl         String?
+  primaryColor    String   @default("#10b981")
+  primaryDarkColor String  @default("#059669")
+  accentColor     String   @default("#f59e0b")
+  darkModeDefault Boolean  @default(false)
+  currency        String   @default("USD")
+  updatedAt       DateTime @updatedAt
+}
+
+model Category {
+  id        String    @id
+  name      String
+  icon      String
+  color     String
+  order     Int       @default(0)
+  products  Product[]
+}
+
+model Product {
+  id          String   @id
+  name        String
+  categoryId  String
+  category    Category @relation(fields: [categoryId], references: [id])
+  price       Float
+  oldPrice    Float?
+  rating      Float    @default(4.5)
+  reviewCount Int      @default(0)
+  images      String // JSON array of URLs
+  description String
+  colors      String? // JSON array of hex strings
+  sizes       String? // JSON array of strings
+  inStock     Boolean  @default(true)
+  badge       String?
+  createdAt   DateTime @default(now())
+}
+
+model Banner {
+  id       String @id
+  title    String
+  subtitle String
+  cta      String
+  image    String
+  color    String
+  order    Int    @default(0)
+}
+
+model Coupon {
+  code        String @id
+  description String
+  minSubtotal Float
+  type        String // percent | flat | shipping
+  value       Float
 }

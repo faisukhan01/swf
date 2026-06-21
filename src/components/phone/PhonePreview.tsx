@@ -11,8 +11,8 @@ import {
   Share2, ThumbsUp, ThumbsDown, MinusCircle, Circle, CheckCircle2, Clock,
 } from "lucide-react";
 import { useMobileStore, type Tab, type TrackingStep } from "@/lib/mobile-store";
+import { useConfigStore, useProductMap, useCategoryMap } from "@/lib/config-store";
 import {
-  products, productMap, categories, categoryMap, banners, coupons,
   sampleReviews, formatPrice, type Product,
 } from "@/lib/mobile-data";
 
@@ -20,7 +20,24 @@ import {
 
 function useTheme() {
   const dark = useMobileStore((s) => s.darkMode);
-  return dark ? darkTokens : lightTokens;
+  const theme = useConfigStore((s) => s.theme);
+  return dark
+    ? {
+        ...darkTokens,
+        primary: theme.primaryColor,
+        primaryDark: theme.primaryDarkColor,
+        primarySoft: theme.primaryColor + "33",
+        accent: theme.accentColor,
+        accentSoft: theme.accentColor + "33",
+      }
+    : {
+        ...lightTokens,
+        primary: theme.primaryColor,
+        primaryDark: theme.primaryDarkColor,
+        primarySoft: theme.primaryColor + "22",
+        accent: theme.accentColor,
+        accentSoft: theme.accentColor + "22",
+      };
 }
 
 const lightTokens = {
@@ -224,11 +241,12 @@ function Row({ label, value, color }: { label: string; value: string; color?: st
 }
 
 function BannerCarousel() {
+  const banners = useConfigStore((s) => s.banners);
   const [idx, setIdx] = useState(0);
   useEffect(() => {
     const i = setInterval(() => setIdx((v) => (v + 1) % banners.length), 3500);
     return () => clearInterval(i);
-  }, []);
+  }, [banners.length]);
   const b = banners[idx];
   return (
     <div className="relative w-full h-full">
@@ -255,9 +273,13 @@ function BannerCarousel() {
 function HomeScreen() {
   const t = useTheme();
   const push = useMobileStore((s) => s.push);
+  const brand = useConfigStore((s) => s.brand);
+  const products = useConfigStore((s) => s.products);
+  const categories = useConfigStore((s) => s.categories);
+  const productMap = useProductMap();
   const recentlyViewed = useMobileStore((s) => s.recentlyViewed);
-  const flash = useMemo(() => products.filter((p) => p.badge === "Hot" || p.badge?.startsWith("-")).slice(0, 6), []);
-  const trending = useMemo(() => [...products].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 6), []);
+  const flash = useMemo(() => products.filter((p) => p.badge === "Hot" || p.badge?.startsWith("-")).slice(0, 6), [products]);
+  const trending = useMemo(() => [...products].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 6), [products]);
   const rvProducts = recentlyViewed.map((id) => productMap[id]).filter(Boolean).slice(0, 6);
 
   return (
@@ -268,7 +290,8 @@ function HomeScreen() {
         <div className="flex items-center justify-between relative">
           <div>
             <p className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.85)" }}>Good morning, Faisu 👋</p>
-            <p className="text-[17px] font-extrabold text-white tracking-tight">Shop smart, live better</p>
+            <p className="text-[15px] font-extrabold text-white tracking-tight">{brand.appName}</p>
+            <p className="text-[10px] font-medium mt-0.5" style={{ color: "rgba(255,255,255,0.8)" }}>{brand.tagline}</p>
           </div>
           <button onClick={() => push("Notifications")} className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md" style={{ backgroundColor: "rgba(255,255,255,0.2)" }}>
             <Bell size={16} className="text-white" />
@@ -343,6 +366,8 @@ function HomeScreen() {
 function ShopScreen() {
   const t = useTheme();
   const push = useMobileStore((s) => s.push);
+  const products = useConfigStore((s) => s.products);
+  const categories = useConfigStore((s) => s.categories);
   const [cat, setCat] = useState<string>("all");
   const [sort, setSort] = useState<"popular" | "price-asc" | "price-desc" | "rating" | "new">("popular");
 
@@ -355,7 +380,7 @@ function ShopScreen() {
       case "new": list.sort((a, b) => (b.badge === "New" ? 1 : 0) - (a.badge === "New" ? 1 : 0)); break;
     }
     return list;
-  }, [cat, sort]);
+  }, [cat, sort, products]);
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -407,6 +432,8 @@ function ShopScreen() {
 
 function ProductDetailScreen({ id }: { id: string }) {
   const t = useTheme();
+  const productMap = useProductMap();
+  const categoryMap = useCategoryMap();
   const p = productMap[id];
   const push = useMobileStore((s) => s.push);
   const addToCart = useMobileStore((s) => s.addToCart);
@@ -638,6 +665,8 @@ function CartScreen() {
   const removeFromCart = useMobileStore((s) => s.removeFromCart);
   const couponCode = useMobileStore((s) => s.couponCode);
   const applyCoupon = useMobileStore((s) => s.applyCoupon);
+  const productMap = useProductMap();
+  const coupons = useConfigStore((s) => s.coupons);
   const [code, setCode] = useState("");
 
   const subtotal = cart.reduce((n, l) => n + (productMap[l.productId]?.price ?? 0) * l.qty, 0);
@@ -761,6 +790,8 @@ function CheckoutScreen() {
   const cart = useMobileStore((s) => s.cart);
   const couponCode = useMobileStore((s) => s.couponCode);
   const placeOrder = useMobileStore((s) => s.placeOrder);
+  const productMap = useProductMap();
+  const coupons = useConfigStore((s) => s.coupons);
   const [payment, setPayment] = useState<"cod" | "card" | "wallet">("cod");
   const [placing, setPlacing] = useState(false);
 
@@ -899,6 +930,7 @@ function WishlistScreen() {
   const t = useTheme();
   const push = useMobileStore((s) => s.push);
   const wishlist = useMobileStore((s) => s.wishlist);
+  const productMap = useProductMap();
   const list = wishlist.map((id) => productMap[id]).filter(Boolean);
 
   if (list.length === 0) {
@@ -930,6 +962,7 @@ function ProfileScreen() {
   const toggleDark = useMobileStore((s) => s.toggleDark);
   const orders = useMobileStore((s) => s.orders);
   const rvCount = useMobileStore((s) => s.recentlyViewed.length);
+  const brand = useConfigStore((s) => s.brand);
 
   const menu = [
     { icon: Package, label: "My Orders", sub: `${orders.length} order(s)`, action: () => push("Orders") },
@@ -983,7 +1016,7 @@ function ProfileScreen() {
         </div>
       </div>
       <div className="px-3 pb-6 text-center">
-        <p className="text-[9px]" style={{ color: t.subtle }}>Shop With Faisu!! v1.0.0</p>
+        <p className="text-[9px]" style={{ color: t.subtle }}>{brand.appName} · v1.0.0</p>
         <p className="text-[8px] mt-0.5" style={{ color: t.subtle }}>Built with React Native + Expo</p>
       </div>
     </div>
@@ -994,6 +1027,7 @@ function OrdersScreen() {
   const t = useTheme();
   const push = useMobileStore((s) => s.push);
   const orders = useMobileStore((s) => s.orders);
+  const productMap = useProductMap();
   return (
     <div className="flex-1 overflow-y-auto p-3 space-y-2.5" style={{ backgroundColor: t.bg }}>
       {orders.length === 0 ? (
@@ -1036,6 +1070,8 @@ function SearchScreen() {
   const t = useTheme();
   const push = useMobileStore((s) => s.push);
   const pop = useMobileStore((s) => s.pop);
+  const products = useConfigStore((s) => s.products);
+  const categories = useConfigStore((s) => s.categories);
   const [q, setQ] = useState("");
   const trending = ["Headphones", "Sneakers", "Coffee", "Smartwatch", "Yoga Mat"];
   const results = q ? products.filter((p) => p.name.toLowerCase().includes(q.toLowerCase())) : [];
@@ -1155,6 +1191,7 @@ function OrderDetailScreen({ id }: { id: string }) {
   const pop = useMobileStore((s) => s.pop);
   const push = useMobileStore((s) => s.push);
   const order = useMobileStore((s) => s.orders.find((o) => o.id === id));
+  const productMap = useProductMap();
 
   if (!order) {
     return (
@@ -1262,6 +1299,7 @@ function RecentlyViewedScreen() {
   const push = useMobileStore((s) => s.push);
   const recentlyViewed = useMobileStore((s) => s.recentlyViewed);
   const clearRecentlyViewed = useMobileStore((s) => s.clearRecentlyViewed);
+  const productMap = useProductMap();
   const list = recentlyViewed.map((id) => productMap[id]).filter(Boolean);
 
   return (
@@ -1430,6 +1468,7 @@ function SettingsScreen() {
 function WriteReviewScreen({ id }: { id: string }) {
   const t = useTheme();
   const pop = useMobileStore((s) => s.pop);
+  const productMap = useProductMap();
   const p = productMap[id];
   const submitReview = useMobileStore((s) => s.submitReview);
 
@@ -1614,8 +1653,14 @@ export function PhonePreview() {
   const tokens = dark ? darkTokens : lightTokens;
   const stack = useMobileStore((s) => s.stack);
   const top = stack[stack.length - 1];
+  const loadConfig = useConfigStore((s) => s.load);
+  const configLoaded = useConfigStore((s) => s.loaded);
   const hideBottomNav = ["ProductDetail", "Checkout", "OrderSuccess", "Search", "OrderDetail", "RecentlyViewed", "Settings", "WriteReview"].includes(top.screen);
   const lightStatusText = top.screen === "Home" || top.screen === "Profile" || top.screen === "OrderDetail";
+
+  useEffect(() => {
+    if (!configLoaded) loadConfig();
+  }, [configLoaded, loadConfig]);
 
   return (
     <div className="relative mx-auto" style={{ width: 320 }}>
