@@ -611,3 +611,32 @@ Stage Summary:
 - "Text Content" option: ADDED to mobile admin panel (in-app editor with 43 editable text fields).
 - "Manage Products/Categories/Banners/Coupons" buttons: FIXED — now open the web admin dashboard in a new tab (where full CRUD works with auth). No longer navigate to home page.
 - All admin panel buttons now work correctly with appropriate behavior (in-app editors for branding/texts/analytics, web dashboard links for product/category/banner/coupon CRUD).
+
+---
+Task ID: 14
+Agent: main
+Task: Fix admin panel scroll issue + ensure save buttons visible
+
+Work Log:
+- USER ISSUE: "In the admin panel I can't scroll down when I open any card. Also when I edit something there is no option to save."
+
+ROOT CAUSE:
+- CSS flexbox issue: the admin screens use `flex-1 overflow-y-auto` for the scrollable content area, but flex children don't shrink below their content size by default. Without `min-h-0`, the flex item grows to fit its content instead of constraining to the available space, so `overflow-y-auto` never triggers scrolling.
+- Result: content overflowed past the phone screen boundary, hiding the save button at the bottom.
+
+FIX:
+- Added `min-h-0` to EVERY `flex-1 flex flex-col` root div (all screen root containers) — this allows flex children to shrink below content size.
+- Added `min-h-0` to EVERY `flex-1 overflow-y-auto` scrollable content area — this ensures the scroll container constrains its height and triggers scrolling when content overflows.
+- Added `min-h-0` to the phone frame's screen content wrapper div.
+- Applied to all 13+ screen root divs and all scrollable content areas across: AdminPanel, AdminBranding, AdminTexts, AdminAnalytics, ProductDetail, Cart, Checkout, Orders, OrderDetail, Addresses, Notifications, Settings, WriteReview, SignIn, SignUp, RecentlyViewed.
+
+QA / VERIFICATION (agent-browser):
+- Opened AdminTexts screen → switched to Cart group (9 fields) → scroll container now has scrollHeight=608 > clientHeight=447 → CAN scroll = true.
+- Scrolled to bottom → "Save All Changes" button is now visible (VLM confirmed: "Yes, there is a green 'Save All Changes' button visible at the bottom").
+- Scrolled back to top → all fields visible + save button visible when content fits.
+- AdminBranding screen: content fits (487=487), save button visible.
+- ESLint clean (0 errors).
+
+Stage Summary:
+- Scroll issue: FIXED. All admin screens (and all other screens) now scroll properly when content exceeds the phone screen height. The `min-h-0` CSS property on flex containers allows proper height constraining.
+- Save buttons: Were always present in the code, but were hidden below the viewport due to the scroll bug. Now visible — either immediately (if content fits) or after scrolling down (if content is tall).

@@ -462,8 +462,8 @@ function ProductDetailScreen({ id }: { id: string }) {
   const discount = p.oldPrice ? Math.round(((p.oldPrice - p.price) / p.oldPrice) * 100) : 0;
 
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="flex-1 overflow-y-auto">
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 overflow-y-auto min-h-0">
         {/* gallery: main image + vertical thumbnail strip */}
         <div className="flex gap-2 p-2.5" style={{ backgroundColor: t.surfaceAlt }}>
           <div className="relative flex-1 aspect-square rounded-xl overflow-hidden" style={{ backgroundColor: t.surface }}>
@@ -704,8 +704,8 @@ function CartScreen() {
   }
 
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2.5 min-h-0">
         {cart.map((l, i) => {
           const p = productMap[l.productId];
           if (!p) return null;
@@ -824,8 +824,8 @@ function CheckoutScreen() {
   };
 
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         <div>
           <h3 className="text-[11px] font-bold mb-1.5" style={{ color: t.text }}>Delivery Address</h3>
           <div className="flex items-start gap-2 p-2.5 rounded-xl" style={{ backgroundColor: t.surfaceAlt }}>
@@ -1114,7 +1114,7 @@ function OrdersScreen() {
   const orders = useMobileStore((s) => s.orders);
   const productMap = useProductMap();
   return (
-    <div className="flex-1 overflow-y-auto p-3 space-y-2.5" style={{ backgroundColor: t.bg }}>
+    <div className="flex-1 overflow-y-auto p-3 space-y-2.5 min-h-0" style={{ backgroundColor: t.bg }}>
       {orders.length === 0 ? (
         <div className="flex-1 flex flex-col items-center justify-center pt-20 text-center">
           <Package size={40} style={{ color: t.subtle }} />
@@ -1162,7 +1162,7 @@ function SearchScreen() {
   const results = q ? products.filter((p) => p.name.toLowerCase().includes(q.toLowerCase())) : [];
 
   return (
-    <div className="flex-1 flex flex-col" style={{ backgroundColor: t.bg }}>
+    <div className="flex-1 flex flex-col min-h-0" style={{ backgroundColor: t.bg }}>
       <div className="flex items-center gap-2 px-3 pt-10 pb-2 border-b" style={{ backgroundColor: t.surface, borderColor: t.border }}>
         <button onClick={pop}><ChevronLeft size={18} style={{ color: t.text }} /></button>
         <div className="flex-1 flex items-center gap-2 px-3 py-2 rounded-xl" style={{ backgroundColor: t.surfaceAlt }}>
@@ -1215,7 +1215,7 @@ function SearchScreen() {
 function AddressesScreen() {
   const t = useTheme();
   return (
-    <div className="flex-1 overflow-y-auto p-3 space-y-2.5" style={{ backgroundColor: t.bg }}>
+    <div className="flex-1 overflow-y-auto p-3 space-y-2.5 min-h-0" style={{ backgroundColor: t.bg }}>
       <div className="rounded-2xl p-3" style={{ backgroundColor: t.surface, border: `1.5px solid ${t.primary}` }}>
         <div className="flex items-center justify-between">
           <span className="text-[8px] font-bold px-1.5 py-0.5 rounded text-white" style={{ backgroundColor: t.primary }}>DEFAULT</span>
@@ -1250,7 +1250,7 @@ function NotificationsScreen() {
     { icon: Heart, color: "#8b5cf6", title: "Back in stock", body: "AuraBeam Headphones are back. Grab yours now!", time: "2d ago" },
   ];
   return (
-    <div className="flex-1 overflow-y-auto p-3 space-y-2" style={{ backgroundColor: t.bg }}>
+    <div className="flex-1 overflow-y-auto p-3 space-y-2 min-h-0" style={{ backgroundColor: t.bg }}>
       {notifs.map((n, i) => (
         <div key={i} className="flex gap-2.5 p-2.5 rounded-xl" style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}>
           <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: n.color + "22" }}>
@@ -1287,8 +1287,8 @@ function OrderDetailScreen({ id }: { id: string }) {
   }
 
   return (
-    <div className="flex-1 flex flex-col">
-      <div className="flex-1 overflow-y-auto p-3 space-y-3" style={{ backgroundColor: t.bg }}>
+    <div className="flex-1 flex flex-col min-h-0">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0" style={{ backgroundColor: t.bg }}>
         {/* status hero */}
         <div className="rounded-2xl p-4 text-center" style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}>
           <div className="w-12 h-12 rounded-full bg-white/20 mx-auto flex items-center justify-center">
@@ -1388,7 +1388,7 @@ function RecentlyViewedScreen() {
   const list = recentlyViewed.map((id) => productMap[id]).filter(Boolean);
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col min-h-0">
       <div className="flex items-center justify-between px-3 pt-10 pb-2 border-b" style={{ backgroundColor: t.surface, borderColor: t.border }}>
         <div className="flex items-center gap-2">
           <button onClick={() => useMobileStore.getState().pop()}><ChevronLeft size={18} style={{ color: t.text }} /></button>
@@ -1442,12 +1442,12 @@ function SettingsScreen() {
   const currencies = ["USD", "PKR", "AED"];
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col min-h-0">
       <div className="flex items-center gap-2 px-3 pt-10 pb-2 border-b" style={{ backgroundColor: t.surface, borderColor: t.border }}>
         <button onClick={pop}><ChevronLeft size={18} style={{ color: t.text }} /></button>
         <h1 className="text-[14px] font-bold" style={{ color: t.text }}>Settings</h1>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-4" style={{ backgroundColor: t.bg }}>
+      <div className="flex-1 overflow-y-auto p-3 space-y-4 min-h-0" style={{ backgroundColor: t.bg }}>
         {/* Preferences */}
         <div>
           <p className="text-[9px] font-bold uppercase tracking-wide mb-1.5 px-1" style={{ color: t.muted }}>Preferences</p>
@@ -1589,12 +1589,12 @@ function WriteReviewScreen({ id }: { id: string }) {
   };
 
   return (
-    <div className="flex-1 flex flex-col">
+    <div className="flex-1 flex flex-col min-h-0">
       <div className="flex items-center gap-2 px-3 pt-10 pb-2 border-b" style={{ backgroundColor: t.surface, borderColor: t.border }}>
         <button onClick={pop}><ChevronLeft size={18} style={{ color: t.text }} /></button>
         <h1 className="text-[14px] font-bold" style={{ color: t.text }}>Write a Review</h1>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-3" style={{ backgroundColor: t.bg }}>
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0" style={{ backgroundColor: t.bg }}>
         {/* product summary */}
         <div className="flex gap-2.5 p-2.5 rounded-2xl" style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}>
           <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0" style={{ backgroundColor: t.surfaceAlt }}>
@@ -1765,12 +1765,12 @@ function SignInScreen() {
   };
 
   return (
-    <div className="flex-1 flex flex-col" style={{ backgroundColor: t.bg }}>
+    <div className="flex-1 flex flex-col min-h-0" style={{ backgroundColor: t.bg }}>
       <div className="flex items-center gap-2 px-3 pt-10 pb-2">
         <button onClick={pop}><ArrowLeft size={18} style={{ color: t.text }} /></button>
         <h1 className="text-[14px] font-bold" style={{ color: t.text }}>Sign In</h1>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col min-h-0">
         {/* hero */}
         <div className="text-center mt-2 mb-5">
           <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-lg" style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}>
@@ -1873,12 +1873,12 @@ function SignUpScreen() {
   };
 
   return (
-    <div className="flex-1 flex flex-col" style={{ backgroundColor: t.bg }}>
+    <div className="flex-1 flex flex-col min-h-0" style={{ backgroundColor: t.bg }}>
       <div className="flex items-center gap-2 px-3 pt-10 pb-2">
         <button onClick={pop}><ArrowLeft size={18} style={{ color: t.text }} /></button>
         <h1 className="text-[14px] font-bold" style={{ color: t.text }}>Create Account</h1>
       </div>
-      <div className="flex-1 overflow-y-auto p-4 flex flex-col">
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col min-h-0">
         <div className="text-center mt-2 mb-5">
           <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-lg" style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}>
             <UserPlus size={28} className="text-white" />
@@ -1993,14 +1993,14 @@ function AdminPanelScreen() {
   ];
 
   return (
-    <div className="flex-1 flex flex-col" style={{ backgroundColor: t.bg }}>
+    <div className="flex-1 flex flex-col min-h-0" style={{ backgroundColor: t.bg }}>
       <div className="flex items-center gap-2 px-3 pt-10 pb-2 border-b" style={{ backgroundColor: t.surface, borderColor: t.border }}>
         <button onClick={pop}><ChevronLeft size={18} style={{ color: t.text }} /></button>
         <h1 className="text-[14px] font-bold flex items-center gap-1.5" style={{ color: t.text }}>
           <Shield size={15} style={{ color: t.primary }} /> Admin Panel
         </h1>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         {/* admin badge */}
         <div className="rounded-2xl p-4 text-center" style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}>
           <div className="w-12 h-12 rounded-full bg-white/20 mx-auto flex items-center justify-center">
@@ -2099,14 +2099,14 @@ function AdminBrandingScreen() {
   };
 
   return (
-    <div className="flex-1 flex flex-col" style={{ backgroundColor: t.bg }}>
+    <div className="flex-1 flex flex-col min-h-0" style={{ backgroundColor: t.bg }}>
       <div className="flex items-center gap-2 px-3 pt-10 pb-2 border-b" style={{ backgroundColor: t.surface, borderColor: t.border }}>
         <button onClick={pop}><ChevronLeft size={18} style={{ color: t.text }} /></button>
         <h1 className="text-[14px] font-bold flex items-center gap-1.5" style={{ color: t.text }}>
           <Palette size={15} style={{ color: t.primary }} /> Branding & Colors
         </h1>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         {/* live preview */}
         <div className="rounded-2xl p-4 text-center" style={{ background: `linear-gradient(135deg, ${primary} 0%, ${theme.primaryDarkColor} 100%)` }}>
           <p className="text-[15px] font-extrabold text-white">{appName || "App Name"}</p>
@@ -2251,7 +2251,7 @@ function AdminTextsScreen() {
   };
 
   return (
-    <div className="flex-1 flex flex-col" style={{ backgroundColor: t.bg }}>
+    <div className="flex-1 flex flex-col min-h-0" style={{ backgroundColor: t.bg }}>
       <div className="flex items-center gap-2 px-3 pt-10 pb-2 border-b" style={{ backgroundColor: t.surface, borderColor: t.border }}>
         <button onClick={pop}><ChevronLeft size={18} style={{ color: t.text }} /></button>
         <h1 className="text-[14px] font-bold flex items-center gap-1.5" style={{ color: t.text }}>
@@ -2276,7 +2276,7 @@ function AdminTextsScreen() {
         ))}
       </div>
 
-      <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+      <div className="flex-1 overflow-y-auto p-3 space-y-2.5 min-h-0">
         {groupFields[activeGroup]?.map((key) => (
           <div key={key}>
             <label className="text-[9px] font-bold uppercase tracking-wide mb-1 block" style={{ color: t.muted }}>
@@ -2328,14 +2328,14 @@ function AdminAnalyticsScreen() {
   }, []);
 
   return (
-    <div className="flex-1 flex flex-col" style={{ backgroundColor: t.bg }}>
+    <div className="flex-1 flex flex-col min-h-0" style={{ backgroundColor: t.bg }}>
       <div className="flex items-center gap-2 px-3 pt-10 pb-2 border-b" style={{ backgroundColor: t.surface, borderColor: t.border }}>
         <button onClick={pop}><ChevronLeft size={18} style={{ color: t.text }} /></button>
         <h1 className="text-[14px] font-bold flex items-center gap-1.5" style={{ color: t.text }}>
           <BarChart3 size={15} style={{ color: t.primary }} /> Analytics
         </h1>
       </div>
-      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+      <div className="flex-1 overflow-y-auto p-3 space-y-3 min-h-0">
         {loading ? (
           <div className="flex justify-center py-8"><Loader2 size={22} className="animate-spin" style={{ color: t.primary }} /></div>
         ) : data ? (
@@ -2471,7 +2471,7 @@ export function PhonePreview() {
           {/* dynamic island */}
           <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-20 h-5 rounded-full z-30" style={{ backgroundColor: "#000" }} />
 
-          <div key={top.screen + (top.params?.id ?? "")} className="flex-1 flex flex-col relative overflow-hidden">
+          <div key={top.screen + (top.params?.id ?? "")} className="flex-1 flex flex-col relative overflow-hidden min-h-0">
             <CurrentScreen />
           </div>
 
