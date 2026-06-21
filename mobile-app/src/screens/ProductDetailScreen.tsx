@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useMemo } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,7 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image as ExpoImage } from 'expo-image';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
-import { useNavigation, useRoute } from '@react-navigation/native';
+import { useNavigation, useFocusEffect, useRoute } from '@react-navigation/native';
 import type { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import type { RootStackParamList } from '@/navigation/RootNavigator';
 import { useTheme } from '@/theme';
@@ -22,6 +22,7 @@ import { reviewsForProduct } from '@/data/reviews';
 import { categoryMap } from '@/data/categories';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
+import { useRecentlyViewedStore } from '@/store/useRecentlyViewedStore';
 import { AppBar } from '@/components/AppBar';
 import { PriceTag } from '@/components/PriceTag';
 import { RatingStars } from '@/components/RatingStars';
@@ -29,6 +30,8 @@ import { Badge } from '@/components/Badge';
 import { QuantityStepper } from '@/components/QuantityStepper';
 import { ReviewItem } from '@/components/ReviewItem';
 import { LoadingShimmer } from '@/components/LoadingShimmer';
+import { formatPrice } from '@/services/format';
+import { Product } from '@/types';
 
 const { width } = Dimensions.get('window');
 
@@ -43,11 +46,32 @@ export const ProductDetailScreen: React.FC = () => {
   const add = useCartStore((s) => s.add);
   const has = useWishlistStore((s) => s.ids.includes(productId));
   const toggleWish = useWishlistStore((s) => s.toggle);
+  const addRecentlyViewed = useRecentlyViewedStore((s) => s.add);
+  const recentIds = useRecentlyViewedStore((s) => s.ids);
+
+  useFocusEffect(
+    useCallback(() => {
+      if (product) {
+        addRecentlyViewed(product.id);
+      }
+    }, [product, addRecentlyViewed])
+  );
 
   const [imageIdx, setImageIdx] = useState(0);
   const [color, setColor] = useState<string | undefined>(product?.colors?.[0]);
   const [size, setSize] = useState<string | undefined>(product?.sizes?.[0]);
   const [qty, setQty] = useState(1);
+
+  // Recently viewed products (excluding the currently viewed one), capped at 6.
+  const recentProducts = useMemo<Product[]>(
+    () =>
+      recentIds
+        .filter((id) => id !== productId)
+        .map((id) => productMap[id])
+        .filter((p): p is Product => Boolean(p))
+        .slice(0, 6),
+    [recentIds, productId]
+  );
 
   if (!product) {
     return (
@@ -227,6 +251,44 @@ export const ProductDetailScreen: React.FC = () => {
           <Text style={[styles.desc, { color: colors.textMuted }]}>{product.description}</Text>
         </View>
 
+        {/* Recently viewed */}
+        {recentProducts.length > 0 ? (
+          <View style={{ marginTop: 18 }}>
+            <View style={[styles.row, { justifyContent: 'space-between', paddingHorizontal: 16, marginBottom: 10 }]}>
+              <View style={[styles.row, { gap: 6 }]}>
+                <MaterialCommunityIcons name="history" size={18} color={colors.primary} />
+                <Text style={[styles.sectionTitle, { color: colors.text, marginBottom: 0 }]}>Recently Viewed</Text>
+              </View>
+              <Text
+                onPress={() => nav.navigate('RecentlyViewed')}
+                style={[styles.seeAll, { color: colors.primary }]}
+              >
+                See all
+              </Text>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={{ paddingHorizontal: 16, gap: 12 }}
+            >
+              {recentProducts.map((p) => (
+                <TouchableOpacity
+                  key={p.id}
+                  activeOpacity={0.85}
+                  onPress={() => nav.push('ProductDetail', { productId: p.id })}
+                  style={[styles.rvCard, { backgroundColor: colors.surface, borderColor: colors.border }]}
+                >
+                  <ExpoImage source={p.images[0]} style={styles.rvImage} contentFit="cover" />
+                  <Text style={[styles.rvName, { color: colors.text }]} numberOfLines={2}>
+                    {p.name}
+                  </Text>
+                  <Text style={[styles.rvPrice, { color: colors.primary }]}>{formatPrice(p.price)}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        ) : null}
+
         {/* Reviews */}
         <View style={[styles.body, { backgroundColor: colors.surface, marginTop: 10 }]}>
           <View style={[styles.row, { justifyContent: 'space-between' }]}>
@@ -253,6 +315,14 @@ export const ProductDetailScreen: React.FC = () => {
               })}
             </View>
           </View>
+          <TouchableOpacity
+            onPress={() => nav.navigate('WriteReview', { productId: product.id })}
+            activeOpacity={0.85}
+            style={[styles.writeReviewBtn, { borderColor: colors.primary }]}
+          >
+            <MaterialCommunityIcons name="star-plus-outline" size={18} color={colors.primary} />
+            <Text style={[styles.writeReviewText, { color: colors.primary }]}>Write a Review</Text>
+          </TouchableOpacity>
           {reviews.length === 0 ? (
             <Text style={[styles.noReviews, { color: colors.textSubtle }]}>
               No reviews yet. Be the first to review!
@@ -417,6 +487,44 @@ const styles = StyleSheet.create({
     fontSize: 12,
     textAlign: 'center',
     paddingVertical: 18,
+  },
+  writeReviewBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    height: 44,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    marginVertical: 6,
+  },
+  writeReviewText: {
+    fontSize: 14,
+    fontWeight: '700',
+  },
+  rvCard: {
+    width: 132,
+    borderRadius: 14,
+    borderWidth: StyleSheet.hairlineWidth,
+    overflow: 'hidden',
+    padding: 8,
+    gap: 4,
+  },
+  rvImage: {
+    width: '100%',
+    height: 110,
+    borderRadius: 10,
+    backgroundColor: '#f1f5f9',
+  },
+  rvName: {
+    fontSize: 12,
+    fontWeight: '600',
+    lineHeight: 15,
+    minHeight: 30,
+  },
+  rvPrice: {
+    fontSize: 13,
+    fontWeight: '800',
   },
   seeAll: {
     fontSize: 13,

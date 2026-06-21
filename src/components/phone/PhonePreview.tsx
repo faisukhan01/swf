@@ -7,8 +7,10 @@ import {
   Search, Heart, ShoppingBag, Home, LayoutGrid, User, ChevronLeft, Star,
   Plus, Minus, Trash2, X, Check, Bell, MapPin, CreditCard, Wallet,
   Truck, Shield, Tag, Sun, Moon, Package, ChevronRight, ArrowRight, Zap,
+  Settings as SettingsIcon, History, PenLine, Globe, DollarSign, FileText,
+  Share2, ThumbsUp, ThumbsDown, MinusCircle, Circle, CheckCircle2, Clock,
 } from "lucide-react";
-import { useMobileStore, type Tab } from "@/lib/mobile-store";
+import { useMobileStore, type Tab, type TrackingStep } from "@/lib/mobile-store";
 import {
   products, productMap, categories, categoryMap, banners, coupons,
   sampleReviews, formatPrice, type Product,
@@ -233,8 +235,10 @@ function BannerCarousel() {
 function HomeScreen() {
   const t = useTheme();
   const push = useMobileStore((s) => s.push);
+  const recentlyViewed = useMobileStore((s) => s.recentlyViewed);
   const flash = useMemo(() => products.filter((p) => p.badge === "Hot" || p.badge?.startsWith("-")).slice(0, 6), []);
   const trending = useMemo(() => [...products].sort((a, b) => b.reviewCount - a.reviewCount).slice(0, 6), []);
+  const rvProducts = recentlyViewed.map((id) => productMap[id]).filter(Boolean).slice(0, 6);
 
   return (
     <div className="flex-1 overflow-y-auto">
@@ -297,6 +301,19 @@ function HomeScreen() {
           ))}
         </div>
       </div>
+
+      {rvProducts.length > 0 && (
+        <div className="px-3 mb-4">
+          <SectionHeader title="Recently Viewed" onSeeAll={() => push("RecentlyViewed")} />
+          <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-3 px-3" style={{ scrollbarWidth: "none" }}>
+            {rvProducts.map((p) => (
+              <div key={p.id} className="w-28 shrink-0">
+                <ProductCard p={p} onClick={() => push("ProductDetail", { id: p.id })} />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -372,11 +389,21 @@ function ProductDetailScreen({ id }: { id: string }) {
   const push = useMobileStore((s) => s.push);
   const addToCart = useMobileStore((s) => s.addToCart);
   const toggleWishlist = useMobileStore((s) => s.toggleWishlist);
+  const addRecentlyViewed = useMobileStore((s) => s.addRecentlyViewed);
+  const userReviews = useMobileStore((s) => s.reviews.filter((r) => r.productId === id));
   const wished = useMobileStore((s) => s.wishlist.includes(id));
   const [imgIdx, setImgIdx] = useState(0);
   const [color, setColor] = useState<string | undefined>(p?.colors?.[0]);
   const [size, setSize] = useState<string | undefined>(p?.sizes?.[0]);
   const [qty, setQty] = useState(1);
+
+  useEffect(() => {
+    if (id) addRecentlyViewed(id);
+    setImgIdx(0);
+    setColor(p?.colors?.[0]);
+    setSize(p?.sizes?.[0]);
+    setQty(1);
+  }, [id, addRecentlyViewed, p]);
 
   if (!p) return null;
   const discount = p.oldPrice ? Math.round(((p.oldPrice - p.price) / p.oldPrice) * 100) : 0;

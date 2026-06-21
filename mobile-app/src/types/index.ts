@@ -131,3 +131,26 @@ export interface AppNotification {
   createdAt: number;
   read: boolean;
 }
+
+// ----- Task 6-a additions -----
+
+export interface ReviewInput {
+  productId: string;
+  rating: number;
+  title: string;
+  body: string;
+  recommend?: boolean;
+}
+
+export type LanguageCode = 'en' | 'ur' | 'ar';
+
+export type CurrencyCode = 'USD' | 'PKR' | 'AED';
+
+export interface Settings {
+  pushNotifications: boolean;
+  emailNotifications: boolean;
+  orderUpdates: boolean;
+  defaultCategory: CategoryId | 'all';
+  language: LanguageCode;
+  currency: CurrencyCode;
+}

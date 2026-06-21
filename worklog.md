@@ -113,3 +113,41 @@ Stage Summary:
 - Cart, wishlist, dark mode, order placement, search, code browsing all functional
 - Sticky header present, footer at bottom, responsive layout
 - Site is interactive and runnable
+
+---
+Task ID: 6-a
+Agent: rn-feature-agent
+Task: Extend the existing React Native (Expo + TS) ecommerce app at /home/z/my-project/mobile-app/ with 3 new screens (Settings, Recently Viewed, Write Review) plus supporting stores, navigation, and ProductDetail/Profile wiring.
+
+Work Log:
+- Read worklog.md and the existing RN project (navigation, screens, stores, theme, components, data) to match patterns exactly.
+- Extended src/types/index.ts with `ReviewInput`, `LanguageCode`, `CurrencyCode`, and `Settings` types.
+- Created src/store/useRecentlyViewedStore.ts — Zustand + AsyncStorage persist. Holds `ids: string[]`, with `add` (prepend/dedupe/cap-at-20), `remove`, and `clear`. Persisted under `faisu.recentlyViewed`.
+- Created src/store/useSettingsStore.ts — Zustand + AsyncStorage persist. Holds push/email/order-update toggles, defaultCategory, language (en/ur/ar), currency (USD/PKR/AED) with setters. Persisted under `faisu.settings`.
+- Created src/screens/SettingsScreen.tsx — iOS-style grouped card layout with sections: Preferences (3 functional Switches wired to useSettingsStore), Appearance (dark mode Switch via useThemeStore + "Use system theme" + default category picker via Alert.alert with all 8 categories + "All"), Region (Language and Currency selectors via Alert.alert — selection persists in store), About (App version 1.0.0, Privacy Policy, Terms of Service, Rate the app, Share the app via RN Share API), Account (destructive logout button → useAuthStore.logout + replace Auth). Uses AppBar with "Settings" title + back.
+- Created src/screens/RecentlyViewedScreen.tsx — 2-column FlatList grid of ProductCard components from useRecentlyViewedStore. Empty state with "Start browsing" CTA when no history. AppBar shows count in title; "Clear" button in header row triggers a confirm Alert then clears the store. Tapping a card pushes ProductDetail.
+- Created src/screens/WriteReviewScreen.tsx — Modal review form. Product summary header (thumbnail + category + name + price), 5-tap star rating with live label ("Poor"/"Fair"/"Good"/"Very Good"/"Excellent"), title TextInput (max 60 with counter), multiline body TextInput (min 20 / max 1000 with counter), segmented "Would you recommend?" Yes/No/Skip control, 3 dashed photo placeholder slots (UI only, Alert on tap), sticky bottom submit bar with validation (rating > 0, title ≥ 3, body ≥ 20). On success shows Alert then navigates back. Uses theme colors throughout.
+- Updated src/screens/ProductDetailScreen.tsx — Added useFocusEffect(useCallback) that calls `addRecentlyViewed(product.id)` on every focus. Added horizontal "Recently Viewed" section above Reviews showing up to 6 other viewed products (excludes current), each tappable to push ProductDetail; "See all" link navigates to RecentlyViewedScreen. Added a "Write a Review" outlined CTA button (star-plus-outline icon) inside the Reviews section that navigates to WriteReview with productId. Added matching StyleSheet entries (rvCard, rvImage, rvName, rvPrice, writeReviewBtn, writeReviewText). Imported useRecentlyViewedStore, useFocusEffect, useCallback, useMemo, formatPrice, Product type.
+- Updated src/screens/ProfileScreen.tsx — Imported useRecentlyViewedStore. Added two menu items to the first group: "Recently Viewed" (history icon, subtitle shows "X products" or "No items yet") → RecentlyViewedScreen, and "Settings" (cog-outline icon, subtitle "Notifications, appearance, region") → SettingsScreen. Extended the local Item component to accept an optional `subtitle` prop rendered below the label.
+- Updated src/navigation/RootNavigator.tsx — Imported the three new screens. Added `Settings: undefined`, `RecentlyViewed: undefined`, `WriteReview: { productId: string }` to RootStackParamList. Registered Stack.Screen entries (WriteReview uses modalScreenOptions so it slides up like Addresses).
+- Verification: ran `npm install` (939 packages) then `npx tsc --noEmit` from mobile-app/ — exit code 0, zero type errors under strict mode. Confirmed Next.js dev server (port 3000) still serves /  with 200s (mobile-app changes are isolated from the web project).
+
+Files created (5):
+- mobile-app/src/store/useRecentlyViewedStore.ts
+- mobile-app/src/store/useSettingsStore.ts
+- mobile-app/src/screens/SettingsScreen.tsx
+- mobile-app/src/screens/RecentlyViewedScreen.tsx
+- mobile-app/src/screens/WriteReviewScreen.tsx
+
+Files modified (4):
+- mobile-app/src/types/index.ts
+- mobile-app/src/screens/ProductDetailScreen.tsx
+- mobile-app/src/screens/ProfileScreen.tsx
+- mobile-app/src/navigation/RootNavigator.tsx
+
+Stage Summary:
+- 3 new screens + 2 new persisted stores + ProductDetail/Profile/Navigator wiring all delivered and type-clean.
+- Settings: every toggle/select actually flips and persists (push/email/order-update via useSettingsStore, dark mode via useThemeStore, language/currency/category via Alert pickers writing to useSettingsStore).
+- Recently Viewed: products are auto-tracked on ProductDetail focus (deduped, capped at 20), surfaced as a horizontal rail on ProductDetail + a full grid screen with clear-all, and counted on the Profile menu subtitle.
+- Write Review: validates rating/title/body, supports recommend toggle + photo placeholders, sticky submit bar, success Alert → back.
+- `npx tsc --noEmit` passes with EXIT_CODE=0. Ready for the Next.js showcase agent to mirror these screens in the phone preview if desired.

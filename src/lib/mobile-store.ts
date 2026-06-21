@@ -13,6 +13,25 @@ export type CartLine = {
 
 export type Tab = "home" | "shop" | "cart" | "wishlist" | "profile";
 
+export type ReviewInput = {
+  productId: string;
+  rating: number;
+  title: string;
+  body: string;
+  recommend: boolean | null;
+  author: string;
+  date: string;
+};
+
+export type Settings = {
+  pushNotifications: boolean;
+  emailNotifications: boolean;
+  orderUpdates: boolean;
+  defaultCategory: string;
+  language: string;
+  currency: string;
+};
+
 type State = {
   // navigation
   activeTab: Tab;
@@ -20,9 +39,12 @@ type State = {
   // data
   cart: CartLine[];
   wishlist: string[];
+  recentlyViewed: string[];
+  reviews: ReviewInput[];
   darkMode: boolean;
   couponCode: string | null;
-  orders: { id: string; date: string; total: number; status: string; items: CartLine[] }[];
+  orders: { id: string; date: string; total: number; status: string; items: CartLine[]; tracking?: TrackingStep[] }[];
+  settings: Settings;
 
   // actions
   setTab: (t: Tab) => void;
@@ -38,9 +60,25 @@ type State = {
   toggleWishlist: (productId: string) => void;
   isWished: (productId: string) => boolean;
 
+  addRecentlyViewed: (productId: string) => void;
+  clearRecentlyViewed: () => void;
+
+  submitReview: (r: ReviewInput) => void;
+  getReviews: (productId: string) => ReviewInput[];
+
+  updateSettings: (patch: Partial<Settings>) => void;
+
   toggleDark: () => void;
   applyCoupon: (code: string | null) => void;
   placeOrder: (total: number) => string;
+};
+
+export type TrackingStep = {
+  label: string;
+  desc: string;
+  time: string;
+  done: boolean;
+  current: boolean;
 };
 
 const lineKey = (productId: string, color?: string, size?: string) =>
@@ -53,9 +91,19 @@ export const useMobileStore = create<State>()(
       stack: [{ screen: "Home" }],
       cart: [],
       wishlist: [],
+      recentlyViewed: [],
+      reviews: [],
       darkMode: false,
       couponCode: null,
       orders: [],
+      settings: {
+        pushNotifications: true,
+        emailNotifications: true,
+        orderUpdates: true,
+        defaultCategory: "all",
+        language: "English",
+        currency: "USD",
+      },
 
       setTab: (t) =>
         set((s) => ({
@@ -126,16 +174,45 @@ export const useMobileStore = create<State>()(
 
       toggleDark: () => set((s) => ({ darkMode: !s.darkMode })),
 
+      addRecentlyViewed: (productId) =>
+        set((s) => ({
+          recentlyViewed: [
+            productId,
+            ...s.recentlyViewed.filter((id) => id !== productId),
+          ].slice(0, 20),
+        })),
+
+      clearRecentlyViewed: () => set({ recentlyViewed: [] }),
+
+      submitReview: (r) => set((s) => ({ reviews: [r, ...s.reviews] })),
+
+      getReviews: (productId) =>
+        get().reviews.filter((r) => r.productId === productId),
+
+      updateSettings: (patch) =>
+        set((s) => ({ settings: { ...s.settings, ...patch } })),
+
       applyCoupon: (code) => set({ couponCode: code }),
 
       placeOrder: (total) => {
         const id = "SWF" + Math.floor(100000 + Math.random() * 900000).toString();
+        const now = new Date();
+        const fmt = (d: Date) =>
+          d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
+        const tracking: TrackingStep[] = [
+          { label: "Order Placed", desc: "We've received your order", time: fmt(now), done: true, current: false },
+          { label: "Processing", desc: "Seller is preparing your items", time: "Pending", done: false, current: true },
+          { label: "Shipped", desc: "On the way to courier facility", time: "Pending", done: false, current: false },
+          { label: "Out for Delivery", desc: "Your order is out for delivery", time: "Pending", done: false, current: false },
+          { label: "Delivered", desc: "Expected in 3-5 business days", time: "Pending", done: false, current: false },
+        ];
         const order = {
           id,
-          date: new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
+          date: now.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }),
           total,
           status: "Processing",
           items: get().cart,
+          tracking,
         };
         set((s) => ({ orders: [order, ...s.orders], cart: [], couponCode: null }));
         return id;
@@ -147,8 +224,11 @@ export const useMobileStore = create<State>()(
       partialize: (s) => ({
         cart: s.cart,
         wishlist: s.wishlist,
+        recentlyViewed: s.recentlyViewed,
+        reviews: s.reviews,
         darkMode: s.darkMode,
         orders: s.orders,
+        settings: s.settings,
       }),
     }
   )

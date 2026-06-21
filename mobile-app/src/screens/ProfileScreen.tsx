@@ -18,6 +18,7 @@ import { useAuthStore } from '@/store/useAuthStore';
 import { useThemeStore } from '@/store/useThemeStore';
 import { useCartStore } from '@/store/useCartStore';
 import { useWishlistStore } from '@/store/useWishlistStore';
+import { useRecentlyViewedStore } from '@/store/useRecentlyViewedStore';
 
 export const ProfileScreen: React.FC = () => {
   const { colors } = useTheme();
@@ -32,6 +33,7 @@ export const ProfileScreen: React.FC = () => {
 
   const cartCount = useCartStore((s) => s.count());
   const wishCount = useWishlistStore((s) => s.ids.length);
+  const recentCount = useRecentlyViewedStore((s) => s.ids.length);
 
   const isDark = themeIsDark === true; // treat null/false as light for the switch
 
@@ -106,6 +108,24 @@ export const ProfileScreen: React.FC = () => {
             label="Notifications"
             colors={colors}
             onPress={() => nav.navigate('Notifications')}
+            rightIcon="chevron-right"
+          />
+          <Item
+            icon="history"
+            color="#0ea5e9"
+            label="Recently Viewed"
+            colors={colors}
+            subtitle={recentCount > 0 ? `${recentCount} product${recentCount === 1 ? '' : 's'}` : 'No items yet'}
+            onPress={() => nav.navigate('RecentlyViewed')}
+            rightIcon="chevron-right"
+          />
+          <Item
+            icon="cog-outline"
+            color={colors.primary}
+            label="Settings"
+            colors={colors}
+            subtitle="Notifications, appearance, region"
+            onPress={() => nav.navigate('Settings')}
             rightIcon="chevron-right"
           />
         </View>
@@ -222,10 +242,11 @@ const Item: React.FC<{
   color: string;
   label: string;
   colors: any;
+  subtitle?: string;
   onPress?: () => void;
   rightIcon?: string;
   rightLabel?: string;
-}> = ({ icon, color, label, colors, onPress, rightIcon, rightLabel }) => (
+}> = ({ icon, color, label, colors, subtitle, onPress, rightIcon, rightLabel }) => (
   <TouchableOpacity
     onPress={onPress}
     style={[styles.item, { borderColor: colors.border }]}
@@ -234,7 +255,12 @@ const Item: React.FC<{
     <View style={[styles.iconWrap, { backgroundColor: color + '22' }]}>
       <MaterialCommunityIcons name={icon as any} size={18} color={color} />
     </View>
-    <Text style={{ flex: 1, color: colors.text, fontSize: 14, fontWeight: '600' }}>{label}</Text>
+    <View style={{ flex: 1 }}>
+      <Text style={{ color: colors.text, fontSize: 14, fontWeight: '600' }}>{label}</Text>
+      {subtitle ? (
+        <Text style={{ color: colors.textMuted, fontSize: 11, marginTop: 2 }}>{subtitle}</Text>
+      ) : null}
+    </View>
     {rightLabel ? (
       <Text style={{ color: colors.textMuted, fontSize: 12, fontWeight: '600' }}>{rightLabel}</Text>
     ) : null}
