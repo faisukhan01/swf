@@ -32,6 +32,13 @@ export type Settings = {
   currency: string;
 };
 
+export type AppUser = {
+  id: string;
+  name: string;
+  email: string;
+  joinedAt: string;
+};
+
 type State = {
   // navigation
   activeTab: Tab;
@@ -45,6 +52,7 @@ type State = {
   couponCode: string | null;
   orders: { id: string; date: string; total: number; status: string; items: CartLine[]; tracking?: TrackingStep[] }[];
   settings: Settings;
+  user: AppUser | null;
 
   // actions
   setTab: (t: Tab) => void;
@@ -67,6 +75,9 @@ type State = {
   getReviews: (productId: string) => ReviewInput[];
 
   updateSettings: (patch: Partial<Settings>) => void;
+
+  signIn: (user: AppUser) => void;
+  signOut: () => void;
 
   toggleDark: () => void;
   applyCoupon: (code: string | null) => void;
@@ -104,6 +115,7 @@ export const useMobileStore = create<State>()(
         language: "English",
         currency: "USD",
       },
+      user: null,
 
       setTab: (t) =>
         set((s) => ({
@@ -192,6 +204,9 @@ export const useMobileStore = create<State>()(
       updateSettings: (patch) =>
         set((s) => ({ settings: { ...s.settings, ...patch } })),
 
+      signIn: (user) => set({ user }),
+      signOut: () => set({ user: null }),
+
       applyCoupon: (code) => set({ couponCode: code }),
 
       placeOrder: (total) => {
@@ -229,6 +244,7 @@ export const useMobileStore = create<State>()(
         darkMode: s.darkMode,
         orders: s.orders,
         settings: s.settings,
+        user: s.user,
       }),
     }
   )

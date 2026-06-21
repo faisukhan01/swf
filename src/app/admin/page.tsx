@@ -24,6 +24,12 @@ import {
   Shield,
   ChevronRight,
   AlertCircle,
+  BarChart3,
+  Users,
+  LogIn,
+  UserPlus,
+  TrendingUp,
+  Activity,
 } from "lucide-react";
 
 // =====================================================================
@@ -36,7 +42,8 @@ type Section =
   | "banners"
   | "products"
   | "categories"
-  | "coupons";
+  | "coupons"
+  | "analytics";
 
 interface AppConfig {
   appName: string;
@@ -106,6 +113,7 @@ const NAV_ITEMS: {
   icon: typeof LayoutDashboard;
 }[] = [
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+  { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "branding", label: "Branding & Theme", icon: Palette },
   { id: "banners", label: "Banners", icon: ImageIcon },
   { id: "products", label: "Products", icon: Package },
@@ -2255,6 +2263,132 @@ function SidebarContent({
 }
 
 // =====================================================================
+// Analytics section
+// =====================================================================
+
+function AnalyticsSection() {
+  const [data, setData] = useState<{
+    totals: { users: number; signUps: number; signIns: number; products: number; categories: number; banners: number; coupons: number };
+    last24h: { signIns: number; signUps: number };
+    chart: { date: string; signups: number; signins: number }[];
+    recentEvents: { id: string; type: string; email: string; name: string | null; createdAt: string }[];
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/admin/analytics")
+      .then((r) => r.json())
+      .then((d) => setData(d))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-20">
+        <Loader2 className="animate-spin text-emerald-400" size={28} />
+      </div>
+    );
+  }
+  if (!data) {
+    return <div className="text-center text-slate-400 py-20">Failed to load analytics.</div>;
+  }
+
+  const maxBar = Math.max(...data.chart.flatMap((d) => [d.signups, d.signins]), 1);
+
+  return (
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-2xl font-bold text-white">Analytics</h1>
+        <p className="text-sm text-slate-400 mt-1">User sign-ups, sign-ins, and store activity</p>
+      </div>
+
+      {/* stat cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <StatCard icon={Users} label="Total Users" value={data.totals.users} color="#10b981" />
+        <StatCard icon={UserPlus} label="Total Sign-ups" value={data.totals.signUps} color="#8b5cf6" />
+        <StatCard icon={LogIn} label="Total Sign-ins" value={data.totals.signIns} color="#f59e0b" />
+        <StatCard icon={Activity} label="Sign-ins (24h)" value={data.last24h.signIns} color="#3b82f6" />
+      </div>
+
+      {/* secondary stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <MiniStat label="Products" value={data.totals.products} />
+        <MiniStat label="Categories" value={data.totals.categories} />
+        <MiniStat label="Banners" value={data.totals.banners} />
+        <MiniStat label="Coupons" value={data.totals.coupons} />
+      </div>
+
+      {/* 7-day chart */}
+      <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-sm font-bold text-white flex items-center gap-2"><TrendingUp size={15} className="text-emerald-400" /> Last 7 Days</h2>
+          <div className="flex items-center gap-3 text-[10px]">
+            <span className="flex items-center gap-1 text-slate-400"><span className="w-2 h-2 rounded-full bg-emerald-500" /> Sign-ups</span>
+            <span className="flex items-center gap-1 text-slate-400"><span className="w-2 h-2 rounded-full bg-amber-500" /> Sign-ins</span>
+          </div>
+        </div>
+        <div className="flex items-end justify-between gap-2 h-40">
+          {data.chart.map((d) => (
+            <div key={d.date} className="flex-1 flex flex-col items-center gap-1.5">
+              <div className="w-full flex items-end justify-center gap-1 h-32">
+                <div className="w-3 rounded-t bg-emerald-500/80 transition-all" style={{ height: `${(d.signups / maxBar) * 100}%`, minHeight: d.signups > 0 ? 4 : 0 }} title={`${d.signups} sign-ups`} />
+                <div className="w-3 rounded-t bg-amber-500/80 transition-all" style={{ height: `${(d.signins / maxBar) * 100}%`, minHeight: d.signins > 0 ? 4 : 0 }} title={`${d.signins} sign-ins`} />
+              </div>
+              <span className="text-[9px] text-slate-500">{new Date(d.date).toLocaleDateString("en", { weekday: "short" })}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* recent activity */}
+      <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-5">
+        <h2 className="text-sm font-bold text-white mb-3">Recent Activity</h2>
+        {data.recentEvents.length === 0 ? (
+          <p className="text-xs text-slate-500 text-center py-6">No activity yet. When users sign up or sign in, it will appear here.</p>
+        ) : (
+          <div className="space-y-2">
+            {data.recentEvents.map((ev) => (
+              <div key={ev.id} className="flex items-center gap-3 p-2.5 rounded-lg bg-white/[0.02]">
+                <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${ev.type === "signup" ? "bg-emerald-500/15" : "bg-amber-500/15"}`}>
+                  {ev.type === "signup" ? <UserPlus size={14} className="text-emerald-400" /> : <LogIn size={14} className="text-amber-400" />}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-white truncate">{ev.name || ev.email}</p>
+                  <p className="text-[10px] text-slate-400">{ev.type === "signup" ? "Signed up" : "Signed in"} · {ev.email}</p>
+                </div>
+                <span className="text-[10px] text-slate-500 shrink-0">{new Date(ev.createdAt).toLocaleString("en", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}</span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StatCard({ icon: Icon, label, value, color }: { icon: typeof Users; label: string; value: number; color: string }) {
+  return (
+    <div className="bg-white/[0.03] border border-white/10 rounded-2xl p-4">
+      <div className="w-9 h-9 rounded-xl flex items-center justify-center mb-2.5" style={{ backgroundColor: color + "22" }}>
+        <Icon size={17} style={{ color }} />
+      </div>
+      <p className="text-2xl font-extrabold text-white">{value.toLocaleString()}</p>
+      <p className="text-[11px] text-slate-400 mt-0.5">{label}</p>
+    </div>
+  );
+}
+
+function MiniStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="bg-white/[0.03] border border-white/10 rounded-xl p-3 text-center">
+      <p className="text-lg font-bold text-white">{value}</p>
+      <p className="text-[10px] text-slate-400">{label}</p>
+    </div>
+  );
+}
+
+// =====================================================================
 // Main admin dashboard
 // =====================================================================
 
@@ -2350,6 +2484,7 @@ export default function AdminDashboard() {
           {active === "products" && <ProductsSection />}
           {active === "categories" && <CategoriesSection />}
           {active === "coupons" && <CouponsSection />}
+          {active === "analytics" && <AnalyticsSection />}
         </main>
       </div>
 

@@ -9,6 +9,7 @@ import {
   Truck, Shield, Tag, Sun, Moon, Package, ChevronRight, ArrowRight, Zap,
   Settings as SettingsIcon, History, PenLine, Globe, DollarSign, FileText,
   Share2, ThumbsUp, ThumbsDown, MinusCircle, Circle, CheckCircle2, Clock,
+  LogOut, Mail, Lock, UserPlus, Loader2, Eye, EyeOff, ArrowLeft,
 } from "lucide-react";
 import { useMobileStore, type Tab, type TrackingStep } from "@/lib/mobile-store";
 import { useConfigStore, useProductMap, useCategoryMap } from "@/lib/config-store";
@@ -962,8 +963,66 @@ function ProfileScreen() {
   const toggleDark = useMobileStore((s) => s.toggleDark);
   const orders = useMobileStore((s) => s.orders);
   const rvCount = useMobileStore((s) => s.recentlyViewed.length);
+  const user = useMobileStore((s) => s.user);
+  const signOut = useMobileStore((s) => s.signOut);
   const brand = useConfigStore((s) => s.brand);
 
+  // ---- SIGNED OUT STATE ----
+  if (!user) {
+    return (
+      <div className="flex-1 overflow-y-auto" style={{ backgroundColor: t.bg }}>
+        <div className="px-3.5 pt-12 pb-8 flex flex-col items-center" style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}>
+          <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
+            <User size={28} className="text-white" />
+          </div>
+          <h2 className="text-[16px] font-extrabold text-white mt-2.5">Welcome to {brand.appName}</h2>
+          <p className="text-[11px] text-white/85 mt-1 text-center px-4">Sign in to sync your cart, orders & wishlist across devices</p>
+        </div>
+        <div className="p-3.5 space-y-2.5">
+          <button
+            onClick={() => push("SignIn")}
+            className="w-full py-3 rounded-2xl text-[12px] font-bold text-white flex items-center justify-center gap-1.5 shadow-lg"
+            style={{ backgroundColor: t.primary, boxShadow: `0 4px 14px ${t.primary}40` }}
+          >
+            Sign In
+          </button>
+          <button
+            onClick={() => push("SignUp")}
+            className="w-full py-3 rounded-2xl text-[12px] font-bold flex items-center justify-center gap-1.5"
+            style={{ backgroundColor: t.surface, color: t.primary, border: `1.5px solid ${t.primary}` }}
+          >
+            Create Account
+          </button>
+        </div>
+        <div className="p-3.5">
+          <p className="text-[9px] font-bold uppercase tracking-wide mb-2" style={{ color: t.muted }}>Guest features</p>
+          <div className="space-y-1.5">
+            {[
+              { icon: ShoppingBag, label: "Browse & shop", sub: "Full catalog access" },
+              { icon: Heart, label: "Save favorites", sub: "Wishlist stays on this device" },
+              { icon: Package, label: "Place orders", sub: "Guest checkout available" },
+            ].map((f, i) => (
+              <div key={i} className="flex items-center gap-2.5 p-2.5 rounded-xl" style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}>
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ backgroundColor: t.primarySoft }}>
+                  <f.icon size={14} style={{ color: t.primary }} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-[10px] font-semibold" style={{ color: t.text }}>{f.label}</p>
+                  <p className="text-[8px]" style={{ color: t.muted }}>{f.sub}</p>
+                </div>
+                <Check size={13} style={{ color: t.primary }} />
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="px-3.5 pb-6 text-center">
+          <p className="text-[9px]" style={{ color: t.subtle }}>{brand.appName} · v1.0.0</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ---- SIGNED IN STATE ----
   const menu = [
     { icon: Package, label: "My Orders", sub: `${orders.length} order(s)`, action: () => push("Orders") },
     { icon: History, label: "Recently Viewed", sub: `${rvCount} product(s)`, action: () => push("RecentlyViewed") },
@@ -976,10 +1035,10 @@ function ProfileScreen() {
 
   return (
     <div className="flex-1 overflow-y-auto" style={{ backgroundColor: t.bg }}>
-      <div className="px-3 pt-12 pb-5 flex flex-col items-center" style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}>
-        <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-[22px] font-bold" style={{ color: t.primary }}>F</div>
-        <h2 className="text-[15px] font-bold text-white mt-2">Faisu Ahmed</h2>
-        <p className="text-[10px] text-white/80">faisu@shopwithfaisu.com</p>
+      <div className="px-3.5 pt-12 pb-5 flex flex-col items-center" style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}>
+        <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-[22px] font-extrabold" style={{ color: t.primary }}>{user.name[0]?.toUpperCase()}</div>
+        <h2 className="text-[15px] font-bold text-white mt-2">{user.name}</h2>
+        <p className="text-[10px] text-white/80">{user.email}</p>
         <div className="flex gap-4 mt-3">
           {[{ n: orders.length, l: "Orders" }, { n: "12", l: "Reviews" }, { n: "3", l: "Addresses" }].map((s) => (
             <div key={s.l} className="text-center">
@@ -1015,9 +1074,19 @@ function ProfileScreen() {
           </button>
         </div>
       </div>
+      {/* Sign out button */}
+      <div className="px-3 pb-3">
+        <button
+          onClick={() => { signOut(); useMobileStore.getState().setTab("home"); }}
+          className="w-full py-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5"
+          style={{ backgroundColor: "#ef444411", color: "#ef4444", border: `1px solid #ef444433` }}
+        >
+          <LogOut size={13} /> Sign Out
+        </button>
+      </div>
       <div className="px-3 pb-6 text-center">
         <p className="text-[9px]" style={{ color: t.subtle }}>{brand.appName} · v1.0.0</p>
-        <p className="text-[8px] mt-0.5" style={{ color: t.subtle }}>Built with React Native + Expo</p>
+        <p className="text-[8px] mt-0.5" style={{ color: t.subtle }}>Member since {user.joinedAt?.slice(0, 10)}</p>
       </div>
     </div>
   );
@@ -1618,6 +1687,227 @@ function WriteReviewScreen({ id }: { id: string }) {
   );
 }
 
+/* ---------------- sign in ---------------- */
+
+function SignInScreen() {
+  const t = useTheme();
+  const pop = useMobileStore((s) => s.pop);
+  const push = useMobileStore((s) => s.push);
+  const signIn = useMobileStore((s) => s.signIn);
+  const brand = useConfigStore((s) => s.brand);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!email || !password) { setError("Please enter your email and password"); return; }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/signin", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Sign in failed"); setLoading(false); return; }
+      signIn(data.user);
+      useMobileStore.getState().setTab("home");
+    } catch {
+      setError("Network error. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col" style={{ backgroundColor: t.bg }}>
+      <div className="flex items-center gap-2 px-3 pt-10 pb-2">
+        <button onClick={pop}><ArrowLeft size={18} style={{ color: t.text }} /></button>
+        <h1 className="text-[14px] font-bold" style={{ color: t.text }}>Sign In</h1>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col">
+        {/* hero */}
+        <div className="text-center mt-2 mb-5">
+          <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-lg" style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}>
+            <ShoppingBag size={28} className="text-white" />
+          </div>
+          <h2 className="text-[17px] font-extrabold mt-3" style={{ color: t.text }}>Welcome back</h2>
+          <p className="text-[11px] mt-1" style={{ color: t.muted }}>Sign in to continue shopping with {brand.appName}</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wide mb-1.5 block" style={{ color: t.muted }}>Email</label>
+            <div className="relative">
+              <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: t.subtle }} />
+              <input
+                type="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                placeholder="you@example.com" required
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl text-[11px] outline-none"
+                style={{ backgroundColor: t.surfaceAlt, color: t.text, border: `1px solid ${t.border}` }}
+              />
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wide mb-1.5 block" style={{ color: t.muted }}>Password</label>
+            <div className="relative">
+              <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: t.subtle }} />
+              <input
+                type={showPw ? "text" : "password"} value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                placeholder="••••••••" required
+                className="w-full pl-9 pr-9 py-2.5 rounded-xl text-[11px] outline-none"
+                style={{ backgroundColor: t.surfaceAlt, color: t.text, border: `1px solid ${t.border}` }}
+              />
+              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: t.subtle }}>
+                {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="px-3 py-2 rounded-xl text-[10px] font-medium" style={{ backgroundColor: "#ef444411", color: "#ef4444", border: "1px solid #ef444433" }}>{error}</div>
+          )}
+
+          <button type="submit" disabled={loading}
+            className="w-full py-3 rounded-xl text-[12px] font-bold text-white flex items-center justify-center gap-1.5 disabled:opacity-60"
+            style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)`, boxShadow: `0 4px 14px ${t.primary}40` }}>
+            {loading ? <><Loader2 size={14} className="animate-spin" /> Signing in...</> : <>Sign In <ArrowRight size={14} /></>}
+          </button>
+        </form>
+
+        <div className="flex items-center gap-2 my-4">
+          <div className="flex-1 h-px" style={{ backgroundColor: t.border }} />
+          <span className="text-[9px]" style={{ color: t.subtle }}>OR</span>
+          <div className="flex-1 h-px" style={{ backgroundColor: t.border }} />
+        </div>
+
+        <button onClick={() => push("SignUp")} className="w-full py-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5" style={{ backgroundColor: t.surface, color: t.text, border: `1.5px solid ${t.border}` }}>
+          <UserPlus size={14} style={{ color: t.primary }} /> Create a new account
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- sign up ---------------- */
+
+function SignUpScreen() {
+  const t = useTheme();
+  const pop = useMobileStore((s) => s.pop);
+  const push = useMobileStore((s) => s.push);
+  const signIn = useMobileStore((s) => s.signIn);
+  const brand = useConfigStore((s) => s.brand);
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPw, setShowPw] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    if (!name || !email || !password) { setError("All fields are required"); return; }
+    if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) { setError(data.error || "Sign up failed"); setLoading(false); return; }
+      signIn(data.user);
+      useMobileStore.getState().setTab("home");
+    } catch {
+      setError("Network error. Please try again.");
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="flex-1 flex flex-col" style={{ backgroundColor: t.bg }}>
+      <div className="flex items-center gap-2 px-3 pt-10 pb-2">
+        <button onClick={pop}><ArrowLeft size={18} style={{ color: t.text }} /></button>
+        <h1 className="text-[14px] font-bold" style={{ color: t.text }}>Create Account</h1>
+      </div>
+      <div className="flex-1 overflow-y-auto p-4 flex flex-col">
+        <div className="text-center mt-2 mb-5">
+          <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-lg" style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}>
+            <UserPlus size={28} className="text-white" />
+          </div>
+          <h2 className="text-[17px] font-extrabold mt-3" style={{ color: t.text }}>Join {brand.appName}</h2>
+          <p className="text-[11px] mt-1" style={{ color: t.muted }}>Create an account to start your shopping journey</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-3">
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wide mb-1.5 block" style={{ color: t.muted }}>Full Name</label>
+            <div className="relative">
+              <User size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: t.subtle }} />
+              <input type="text" value={name} onChange={(e) => { setName(e.target.value); setError(""); }}
+                placeholder="Faisu Ahmed" required
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl text-[11px] outline-none"
+                style={{ backgroundColor: t.surfaceAlt, color: t.text, border: `1px solid ${t.border}` }} />
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wide mb-1.5 block" style={{ color: t.muted }}>Email</label>
+            <div className="relative">
+              <Mail size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: t.subtle }} />
+              <input type="email" value={email} onChange={(e) => { setEmail(e.target.value); setError(""); }}
+                placeholder="you@example.com" required
+                className="w-full pl-9 pr-3 py-2.5 rounded-xl text-[11px] outline-none"
+                style={{ backgroundColor: t.surfaceAlt, color: t.text, border: `1px solid ${t.border}` }} />
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wide mb-1.5 block" style={{ color: t.muted }}>Password</label>
+            <div className="relative">
+              <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2" style={{ color: t.subtle }} />
+              <input type={showPw ? "text" : "password"} value={password} onChange={(e) => { setPassword(e.target.value); setError(""); }}
+                placeholder="Min 6 characters" required
+                className="w-full pl-9 pr-9 py-2.5 rounded-xl text-[11px] outline-none"
+                style={{ backgroundColor: t.surfaceAlt, color: t.text, border: `1px solid ${t.border}` }} />
+              <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2" style={{ color: t.subtle }}>
+                {showPw ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+          </div>
+
+          {error && (
+            <div className="px-3 py-2 rounded-xl text-[10px] font-medium" style={{ backgroundColor: "#ef444411", color: "#ef4444", border: "1px solid #ef444433" }}>{error}</div>
+          )}
+
+          <button type="submit" disabled={loading}
+            className="w-full py-3 rounded-xl text-[12px] font-bold text-white flex items-center justify-center gap-1.5 disabled:opacity-60"
+            style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)`, boxShadow: `0 4px 14px ${t.primary}40` }}>
+            {loading ? <><Loader2 size={14} className="animate-spin" /> Creating account...</> : <>Create Account <ArrowRight size={14} /></>}
+          </button>
+        </form>
+
+        <div className="flex items-center gap-2 my-4">
+          <div className="flex-1 h-px" style={{ backgroundColor: t.border }} />
+          <span className="text-[9px]" style={{ color: t.subtle }}>OR</span>
+          <div className="flex-1 h-px" style={{ backgroundColor: t.border }} />
+        </div>
+
+        <button onClick={() => push("SignIn")} className="w-full py-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5" style={{ backgroundColor: t.surface, color: t.text, border: `1.5px solid ${t.border}` }}>
+          <Mail size={14} style={{ color: t.primary }} /> Already have an account? Sign in
+        </button>
+
+        <p className="text-[8px] text-center mt-3" style={{ color: t.subtle }}>
+          By signing up you agree to our Terms of Service & Privacy Policy
+        </p>
+      </div>
+    </div>
+  );
+}
+
 /* ---------------- screen router ---------------- */
 
 function CurrentScreen() {
@@ -1642,6 +1932,8 @@ function CurrentScreen() {
     case "Settings": return <SettingsScreen />;
     case "RecentlyViewed": return <RecentlyViewedScreen />;
     case "WriteReview": return <WriteReviewScreen id={params.id as string} />;
+    case "SignIn": return <SignInScreen />;
+    case "SignUp": return <SignUpScreen />;
     default: return <HomeScreen />;
   }
 }
@@ -1655,7 +1947,7 @@ export function PhonePreview() {
   const top = stack[stack.length - 1];
   const loadConfig = useConfigStore((s) => s.load);
   const configLoaded = useConfigStore((s) => s.loaded);
-  const hideBottomNav = ["ProductDetail", "Checkout", "OrderSuccess", "Search", "OrderDetail", "RecentlyViewed", "Settings", "WriteReview"].includes(top.screen);
+  const hideBottomNav = ["ProductDetail", "Checkout", "OrderSuccess", "Search", "OrderDetail", "RecentlyViewed", "Settings", "WriteReview", "SignIn", "SignUp"].includes(top.screen);
   const lightStatusText = top.screen === "Home" || top.screen === "Profile" || top.screen === "OrderDetail";
 
   useEffect(() => {

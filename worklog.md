@@ -351,3 +351,56 @@ Stage Summary:
 - Phone preview is now 100% database-driven: products, banners, categories, coupons, brand, and theme colors all load from /api/config on mount
 - Admin changes reflect in the live preview on next page load
 - Security: middleware guards all /admin routes, JWT verification, httpOnly+sameSite=strict cookies, bcrypt password hashing, requireAdmin() on every mutation API
+
+---
+Task ID: 10
+Agent: main
+Task: Fix blank profile page, add sign-out + auth flow (sign in/up), admin analytics with user tracking
+
+Work Log:
+- USER ISSUES: (1) Profile page still showing blank. (2) No sign-out option. (3) Need sign in/up flow. (4) Make auth pages aesthetic. (5) Admin analytics: total sign-ins, sign-ups, everything.
+
+PROFILE PAGE BLANK ISSUE:
+- Investigated thoroughly: DOM has all content (green header, avatar, name, menu items), correct styles (green gradient bg, 222px height, opacity 1, no transform). The "blank" issue was a viewport screenshot timing artifact in the headless browser — full-page screenshots confirmed the profile renders correctly with all content visible.
+- Rebuilt ProfileScreen completely to be more robust: now has SIGNED OUT state (welcome + Sign In/Create Account buttons + guest features) and SIGNED IN state (user info + menu + Sign Out button).
+
+USER AUTH FLOW:
+- Added AppUser model to Prisma (id, name, email, password, createdAt, lastLogin, signInCount) + AuthEvent model (type: signup/signin, email, userId, createdAt).
+- Created /api/auth/signup (POST): validates, bcrypt-hashes password, creates AppUser, logs AuthEvent.
+- Created /api/auth/signin (POST): verifies password, updates lastLogin + signInCount, logs AuthEvent.
+- Added user auth state to mobile-store.ts: AppUser type, user: AppUser|null, signIn()/signOut() actions, persisted.
+- Built SignInScreen: premium aesthetic — gradient hero icon, email/password fields with icons, show/hide password, error handling, loading state, link to SignUp.
+- Built SignUpScreen: matching aesthetic — name/email/password fields, validation (min 6 char password), error handling, link to SignIn, Terms notice.
+- Rebuilt ProfileScreen:
+  * Signed out: gradient header with user icon, "Welcome to {appName}", Sign In + Create Account buttons, guest features list.
+  * Signed in: avatar with user initial, name, email, stats, menu items, dark mode toggle, red Sign Out button, "Member since" date.
+- Registered SignIn/SignUp in CurrentScreen router + hideBottomNav list.
+
+ADMIN ANALYTICS:
+- Added AppUser + AuthEvent models to Prisma schema, ran db:push + db:generate.
+- Created /api/admin/analytics (GET, admin-protected): returns totals (users, signUps, signIns, products, categories, banners, coupons), last24h stats, 7-day chart data (signups/signins per day), recent 20 auth events with user names.
+- Added Analytics section to admin dashboard (src/app/admin/page.tsx):
+  * "Analytics" nav item with BarChart3 icon.
+  * 4 stat cards: Total Users, Total Sign-ups, Total Sign-ins, Sign-ins (24h) — each with colored icon.
+  * 4 mini stats: Products, Categories, Banners, Coupons.
+  * 7-day bar chart: dual bars (emerald=signups, amber=signins) per day with weekday labels.
+  * Recent Activity feed: shows last 20 sign-ups/sign-ins with user name, email, type icon, timestamp.
+- Fixed analytics API: removed `include: { user }` (AuthEvent has no relation) → fetches user names separately via email lookup.
+
+BUG FIX: Prisma client caching — after adding new models (AppUser, AuthEvent), the running dev server had a stale Prisma client (db.appUser was undefined). Fixed by killing dev server, running db:generate, and restarting. Added console.error logging to signup API for future debugging.
+
+QA / VERIFICATION (agent-browser):
+- Profile (signed out): shows "Welcome to Shop With Faisu!!" + Sign In + Create Account buttons (VLM confirmed).
+- Sign Up flow: filled form (Faisu Test / faisutest@example.com / test123456) → submitted → user created in DB → user persisted in localStorage → redirected to Home (signed in). VLM confirmed signup screen 8/10 aesthetic.
+- Profile (signed in): full-page screenshot confirmed green header with "Faisu Test", email, stats, menu items, and Sign Out button all visible.
+- Admin login: faisu577277@gmail.com / QaReLc_61y8 → redirected to /admin dashboard.
+- Admin Analytics: shows Total Users: 2, Total Sign-ups: 2, Products: 27, Categories: 8, Banners: 3, Coupons: 4, 7-day chart, recent activity (Faisu Test, Test User). VLM confirmed.
+- ESLint clean (0 errors).
+
+Stage Summary:
+- Profile page: confirmed rendering correctly (was screenshot timing issue); rebuilt with signed-out + signed-in states.
+- Sign Out button: added to profile (red, prominent).
+- Auth flow: full sign in + sign up with database-backed user accounts (bcrypt hashed), aesthetic premium screens.
+- Admin analytics: total users, sign-ups, sign-ins, 24h activity, 7-day chart, recent activity feed — all tracked via AuthEvent table.
+- Admin security: unchanged (middleware + JWT + httpOnly cookie + requireAdmin on all admin APIs).
+- Admin can manage EVERYTHING: brand name, tagline, logo, all theme colors, products (CRUD), categories (CRUD), banners (CRUD), coupons (CRUD), and now view analytics (sign-ups, sign-ins, user activity).

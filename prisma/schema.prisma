@@ -16,6 +16,24 @@ model AdminUser {
   createdAt DateTime @default(now())
 }
 
+model AppUser {
+  id         String   @id @default(cuid())
+  name       String
+  email      String   @unique
+  password   String   // bcrypt hash
+  createdAt  DateTime @default(now())
+  lastLogin  DateTime?
+  signInCount Int     @default(0)
+}
+
+model AuthEvent {
+  id        String   @id @default(cuid())
+  type      String   // "signup" | "signin"
+  email     String
+  userId    String?
+  createdAt DateTime @default(now())
+}
+
 // Singleton row holding brand + theme config
 model AppConfig {
   id              String   @id @default("singleton")
