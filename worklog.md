@@ -678,3 +678,29 @@ Stage Summary:
 - Saved changes appear in the live app within 5 seconds (config polling).
 - Both web admin (/admin) and mobile in-app admin can edit — both reflect in the preview automatically.
 - Security: mobile admin uses JWT Bearer token (not cookie), verified via verifySession on every mutation.
+
+---
+Task ID: 16
+Agent: main
+Task: REVERT Task 15 changes that corrupted text values + fix the DB
+
+Work Log:
+- USER FEEDBACK: "You have ruined it. I am not getting the text and the headings. Please revert these current changes."
+- INVESTIGATION: Checked /api/config → found 42 of 43 text fields were empty strings in the database. Only greetingSignedOut had a value.
+- ROOT CAUSE: The config polling (setInterval every 5s) combined with the AdminTextsScreen overrides save pattern. When polling overwrote the store mid-edit, the save captured corrupted/empty values and wrote them to the DB. The empty values then propagated to all screens via the config store.
+- FIX 1: Reset all text values in the database back to defaults using prisma/reset-texts.ts script. Verified: 43 fields, 0 empty.
+- FIX 2: Reverted ALL changes from Task 15:
+  * Removed config polling (setInterval) — back to single fetch on mount only.
+  * Reverted AdminBrandingScreen save back to /api/admin/config (web admin cookie).
+  * Reverted AdminTextsScreen save back to /api/admin/config.
+  * Reverted SignInScreen — removed mobile admin token fetching.
+  * Reverted mobile store — removed adminToken and setAdminToken.
+  * Kept the mobile-admin API files (/api/mobile-admin/*) but they're no longer used by the app.
+- VERIFICATION: Opened the app → all text and headings show correctly: "Hey Cutie Pookie 👋", "Sign in to shop!!", "Categories", "Flash Deals", all category names, product names, etc.
+- ESLint clean.
+
+Stage Summary:
+- All text and headings are restored and showing correctly in the app.
+- The problematic polling and mobile admin token changes have been fully reverted.
+- The app is back to the stable state from Task 14 (working admin panel with scroll fix, text content editor, branding editor, etc.).
+- Admin edits from the web admin dashboard (/admin) still work correctly and persist to the DB. The mobile in-app editors can view and edit but saves require the web admin cookie (as designed before Task 15).

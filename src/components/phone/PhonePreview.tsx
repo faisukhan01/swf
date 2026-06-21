@@ -1710,7 +1710,6 @@ function SignInScreen() {
   const pop = useMobileStore((s) => s.pop);
   const push = useMobileStore((s) => s.push);
   const signIn = useMobileStore((s) => s.signIn);
-  const setAdminToken = useMobileStore((s) => s.setAdminToken);
   const brand = useConfigStore((s) => s.brand);
   const texts = useConfigStore((s) => s.texts);
   const [email, setEmail] = useState("");
@@ -1740,14 +1739,6 @@ function SignInScreen() {
         });
         const adminData = await adminRes.json();
         if (adminData.isAdmin) {
-          // Get a mobile admin token for in-app mutations
-          const tokenRes = await fetch("/api/mobile-admin/login", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ email, password }),
-          });
-          const tokenData = await tokenRes.json();
-          if (tokenData.ok) setAdminToken(tokenData.token);
           signIn({ id: "admin", name: adminData.name || "Admin", email: adminData.email, joinedAt: new Date().toISOString(), isAdmin: true });
           useMobileStore.getState().push("AdminPanel");
           setLoading(false);
@@ -1764,14 +1755,6 @@ function SignInScreen() {
       const adminData = await adminRes.json();
       if (adminData.isAdmin) {
         data.user.isAdmin = true;
-        // Get a mobile admin token for in-app mutations
-        const tokenRes = await fetch("/api/mobile-admin/login", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-        const tokenData = await tokenRes.json();
-        if (tokenData.ok) setAdminToken(tokenData.token);
       }
       signIn(data.user);
       useMobileStore.getState().setTab("home");
@@ -2084,7 +2067,6 @@ function AdminPanelScreen() {
 function AdminBrandingScreen() {
   const t = useTheme();
   const pop = useMobileStore((s) => s.pop);
-  const adminToken = useMobileStore((s) => s.adminToken);
   const brand = useConfigStore((s) => s.brand);
   const theme = useConfigStore((s) => s.theme);
   const loadConfig = useConfigStore((s) => s.load);
@@ -2099,19 +2081,16 @@ function AdminBrandingScreen() {
     setSaving(true);
     setMsg("");
     try {
-      const res = await fetch("/api/mobile-admin/config", {
+      const res = await fetch("/api/admin/config", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ appName, tagline, primaryColor: primary, accentColor: accent }),
       });
       if (res.ok) {
         setMsg("Saved! Changes are now live.");
         loadConfig();
       } else {
-        setMsg("Save failed. Please sign in again.");
+        setMsg("Save failed. Use the full web dashboard.");
       }
     } catch {
       setMsg("Network error.");
@@ -2180,7 +2159,6 @@ function AdminBrandingScreen() {
 function AdminTextsScreen() {
   const t = useTheme();
   const pop = useMobileStore((s) => s.pop);
-  const adminToken = useMobileStore((s) => s.adminToken);
   const texts = useConfigStore((s) => s.texts);
   const loadConfig = useConfigStore((s) => s.load);
   const [overrides, setOverrides] = useState<Record<string, string>>({});
@@ -2197,12 +2175,9 @@ function AdminTextsScreen() {
     setMsg("");
     const allValues = { ...texts, ...overrides };
     try {
-      const res = await fetch("/api/mobile-admin/config", {
+      const res = await fetch("/api/admin/config", {
         method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          ...(adminToken ? { Authorization: `Bearer ${adminToken}` } : {}),
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ texts: allValues }),
       });
       if (res.ok) {
@@ -2210,7 +2185,7 @@ function AdminTextsScreen() {
         setOverrides({});
         loadConfig();
       } else {
-        setMsg("Save failed. Please sign in again.");
+        setMsg("Save failed. Use the full web dashboard.");
       }
     } catch {
       setMsg("Network error.");
@@ -2443,9 +2418,6 @@ export function PhonePreview() {
 
   useEffect(() => {
     if (!configLoaded) loadConfig();
-    // Poll for config changes every 5 seconds so admin edits reflect in the live preview
-    const interval = setInterval(() => loadConfig(), 5000);
-    return () => clearInterval(interval);
   }, [configLoaded, loadConfig]);
 
   return (
