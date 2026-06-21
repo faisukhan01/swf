@@ -54,6 +54,7 @@ type State = {
   orders: { id: string; date: string; total: number; status: string; items: CartLine[]; tracking?: TrackingStep[] }[];
   settings: Settings;
   user: AppUser | null;
+  adminToken: string | null;
 
   // actions
   setTab: (t: Tab) => void;
@@ -79,6 +80,7 @@ type State = {
 
   signIn: (user: AppUser) => void;
   signOut: () => void;
+  setAdminToken: (token: string | null) => void;
 
   toggleDark: () => void;
   applyCoupon: (code: string | null) => void;
@@ -117,6 +119,7 @@ export const useMobileStore = create<State>()(
         currency: "USD",
       },
       user: null,
+      adminToken: null,
 
       setTab: (t) =>
         set((s) => ({
@@ -206,7 +209,8 @@ export const useMobileStore = create<State>()(
         set((s) => ({ settings: { ...s.settings, ...patch } })),
 
       signIn: (user) => set({ user }),
-      signOut: () => set({ user: null }),
+      signOut: () => set({ user: null, adminToken: null }),
+      setAdminToken: (token) => set({ adminToken: token }),
 
       applyCoupon: (code) => set({ couponCode: code }),
 
@@ -246,6 +250,7 @@ export const useMobileStore = create<State>()(
         orders: s.orders,
         settings: s.settings,
         user: s.user,
+        adminToken: s.adminToken,
       }),
     }
   )

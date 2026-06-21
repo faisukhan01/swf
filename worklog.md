@@ -640,3 +640,41 @@ QA / VERIFICATION (agent-browser):
 Stage Summary:
 - Scroll issue: FIXED. All admin screens (and all other screens) now scroll properly when content exceeds the phone screen height. The `min-h-0` CSS property on flex containers allows proper height constraining.
 - Save buttons: Were always present in the code, but were hidden below the viewport due to the scroll bug. Now visible — either immediately (if content fits) or after scrolling down (if content is tall).
+
+---
+Task ID: 15
+Agent: main
+Task: Fix admin edits not reflecting in the app — implement mobile admin save + config polling
+
+Work Log:
+- USER ISSUE: "When I edit or change or update the text from admin panel and then save it, this is not implemented in the app."
+
+ROOT CAUSES (two issues):
+1. Config caching: The mobile app only fetched config ONCE on mount (if (!configLoaded) loadConfig()). After admin saved changes, the app never re-fetched — it kept showing old values until a full page reload.
+2. Mobile admin saves failed: The in-app admin editors (Branding, Texts) called PUT /api/admin/config which requires the web admin cookie session. The mobile app uses its own auth, so saves returned 401 "Unauthorized".
+
+FIXES:
+1. Config polling: Added setInterval(() => loadConfig(), 5000) in PhonePreview useEffect. The app now re-fetches config every 5 seconds, so admin changes (from web or mobile) automatically appear in the live preview within 5 seconds.
+
+2. Mobile admin authentication:
+   - Created /api/mobile-admin/login (POST): verifies admin credentials, returns a JWT token (same createSession as web admin).
+   - Created /api/mobile-admin/config (PUT): accepts Bearer token in Authorization header, verifies via verifySession, then updates config. Same allowed fields as web admin.
+   - Added adminToken to mobile store (persisted), setAdminToken action.
+   - Updated SignInScreen: when admin credentials detected, calls /api/mobile-admin/login to get a token and stores it via setAdminToken.
+   - Updated AdminBrandingScreen and AdminTextsScreen: save now calls /api/mobile-admin/config with Authorization: Bearer <token> header instead of relying on cookie.
+   - Sign out clears adminToken.
+
+QA / VERIFICATION (agent-browser):
+- Signed in as admin from mobile app → adminToken stored in localStorage ✓
+- Opened Text Content editor → changed greeting to "Welcome Boss!" → tapped Save → "Saved! Changes are now live." ✓
+- Verified in DB: curl /api/config → greetingSignedOut: "Welcome Boss!" ✓
+- Signed out → home screen shows "Welcome Boss!" (signed-out greeting reflects the change) ✓
+- Signed back in → reset greeting to "Hey Cutie Pookie 👋" → Save → "Saved!" → verified in DB ✓
+- Config polling: every 5 seconds the app re-fetches /api/config, so changes from web admin also appear automatically ✓
+- ESLint clean (0 errors).
+
+Stage Summary:
+- Admin edits (text, branding) now SAVE successfully from the mobile in-app editors via the mobile admin JWT token.
+- Saved changes appear in the live app within 5 seconds (config polling).
+- Both web admin (/admin) and mobile in-app admin can edit — both reflect in the preview automatically.
+- Security: mobile admin uses JWT Bearer token (not cookie), verified via verifySession on every mutation.
