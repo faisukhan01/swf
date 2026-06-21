@@ -10,7 +10,7 @@ import {
   Settings as SettingsIcon, History, PenLine, Globe, DollarSign, FileText,
   Share2, ThumbsUp, ThumbsDown, MinusCircle, Circle, CheckCircle2, Clock,
   LogOut, Mail, Lock, UserPlus, Loader2, Eye, EyeOff, ArrowLeft,
-  Palette, Image as ImageIcon, Ticket, BarChart3, Activity, ExternalLink, Save,
+  Palette, Image as ImageIcon, Ticket, BarChart3, Activity, ExternalLink, Save, Type,
 } from "lucide-react";
 import { useMobileStore, type Tab, type TrackingStep } from "@/lib/mobile-store";
 import { useConfigStore, useProductMap, useCategoryMap } from "@/lib/config-store";
@@ -1959,11 +1959,9 @@ function AdminPanelScreen() {
   const push = useMobileStore((s) => s.push);
   const brand = useConfigStore((s) => s.brand);
   const [stats, setStats] = useState<{ users: number; signUps: number; signIns: number; products: number; categories: number; banners: number; coupons: number } | null>(null);
-  const [recent, setRecent] = useState<{ id: string; type: string; email: string; name: string | null; createdAt: string }[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Public config endpoint already gives product/category/banner/coupon counts
     fetch("/api/config")
       .then((r) => r.json())
       .then((d) => {
@@ -1979,12 +1977,18 @@ function AdminPanelScreen() {
       .finally(() => setLoading(false));
   }, []);
 
+  // Management actions that open the full web admin dashboard (where mutations work with auth)
+  const openWebAdmin = (section: string) => {
+    window.open(`/admin?section=${section}`, "_blank");
+  };
+
   const adminActions = [
     { icon: Palette, label: "Branding & Colors", sub: "Change app name, colors, logo", color: "#10b981", action: () => push("AdminBranding") },
-    { icon: Package, label: "Manage Products", sub: "Add, edit, delete products", color: "#f59e0b", action: () => push("AdminProducts") },
-    { icon: LayoutGrid, label: "Manage Categories", sub: "Add, edit, delete categories", color: "#8b5cf6", action: () => {} },
-    { icon: ImageIcon, label: "Manage Banners", sub: "Edit promo banners", color: "#ec4899", action: () => {} },
-    { icon: Ticket, label: "Manage Coupons", sub: "Add, edit coupon codes", color: "#0ea5e9", action: () => {} },
+    { icon: Type, label: "Text Content", sub: "Edit all text in the app", color: "#6366f1", action: () => push("AdminTexts") },
+    { icon: Package, label: "Manage Products", sub: "Add, edit, delete products", color: "#f59e0b", action: () => openWebAdmin("products") },
+    { icon: LayoutGrid, label: "Manage Categories", sub: "Add, edit, delete categories", color: "#8b5cf6", action: () => openWebAdmin("categories") },
+    { icon: ImageIcon, label: "Manage Banners", sub: "Edit promo banners", color: "#ec4899", action: () => openWebAdmin("banners") },
+    { icon: Ticket, label: "Manage Coupons", sub: "Add, edit coupon codes", color: "#0ea5e9", action: () => openWebAdmin("coupons") },
     { icon: BarChart3, label: "View Analytics", sub: "Sign-ups, sign-ins, activity", color: "#ef4444", action: () => push("AdminAnalytics") },
   ];
 
@@ -2032,7 +2036,7 @@ function AdminPanelScreen() {
           <p className="text-[9px] font-bold uppercase tracking-wide mb-2" style={{ color: t.muted }}>Management</p>
           <div className="space-y-1.5">
             {adminActions.map((a, i) => (
-              <button key={i} onClick={a.action} className="w-full flex items-center gap-2.5 p-2.5 rounded-xl" style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}>
+              <button key={i} onClick={a.action} className="w-full flex items-center gap-2.5 p-2.5 rounded-xl active:scale-[0.98] transition" style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}>
                 <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: a.color + "22" }}>
                   <a.icon size={15} style={{ color: a.color }} />
                 </div>
@@ -2040,22 +2044,19 @@ function AdminPanelScreen() {
                   <p className="text-[11px] font-semibold" style={{ color: t.text }}>{a.label}</p>
                   <p className="text-[8px]" style={{ color: t.muted }}>{a.sub}</p>
                 </div>
-                <ChevronRight size={14} style={{ color: t.subtle }} />
+                {a.label.includes("Manage") ? <ExternalLink size={12} style={{ color: t.subtle }} /> : <ChevronRight size={14} style={{ color: t.subtle }} />}
               </button>
             ))}
           </div>
         </div>
 
-        {/* full admin link */}
-        <a
-          href="/admin"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl text-[11px] font-bold text-white"
-          style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}
-        >
-          <ExternalLink size={13} /> Open Full Admin Dashboard
-        </a>
+        {/* info note */}
+        <div className="rounded-xl p-2.5" style={{ backgroundColor: t.accentSoft, border: `1px solid ${t.accent}33` }}>
+          <p className="text-[8px] leading-relaxed" style={{ color: t.text }}>
+            <ExternalLink size={9} className="inline -mt-0.5 mr-0.5" style={{ color: t.accent }} />
+            Product, Category, Banner & Coupon editors open the full web dashboard in a new tab. Sign in there with the same admin credentials to make changes.
+          </p>
+        </div>
       </div>
     </div>
   );
@@ -2147,6 +2148,157 @@ function AdminBrandingScreen() {
       <div className="p-3 border-t" style={{ backgroundColor: t.surface, borderColor: t.border, paddingBottom: 14 }}>
         <button onClick={handleSave} disabled={saving} className="w-full py-2.5 rounded-xl text-[11px] font-bold text-white flex items-center justify-center gap-1.5" style={{ backgroundColor: t.primary, opacity: saving ? 0.6 : 1 }}>
           {saving ? <><Loader2 size={13} className="animate-spin" /> Saving...</> : <><Save size={13} /> Save Changes</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- admin texts (in-app text editor) ---------------- */
+
+function AdminTextsScreen() {
+  const t = useTheme();
+  const pop = useMobileStore((s) => s.pop);
+  const texts = useConfigStore((s) => s.texts);
+  const loadConfig = useConfigStore((s) => s.load);
+  const [overrides, setOverrides] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [activeGroup, setActiveGroup] = useState<string>("Home");
+
+  const getValue = (key: string) => overrides[key] ?? texts[key] ?? "";
+
+  const groups = ["Home", "Cart", "Checkout", "Wishlist", "Orders", "Profile", "Auth", "Product"];
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMsg("");
+    const allValues = { ...texts, ...overrides };
+    try {
+      const res = await fetch("/api/admin/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texts: allValues }),
+      });
+      if (res.ok) {
+        setMsg("Saved! Changes are now live.");
+        setOverrides({});
+        loadConfig();
+      } else {
+        setMsg("Save failed. Use the full web dashboard.");
+      }
+    } catch {
+      setMsg("Network error.");
+    }
+    setSaving(false);
+  };
+
+  const fieldLabels: Record<string, string> = {
+    greetingSignedOut: "Greeting (signed out)",
+    greetingSignedOutSub: "Subtitle (signed out)",
+    greetingSignedInPrefix: "Greeting prefix (signed in)",
+    sectionCategories: "Categories title",
+    sectionFlashDeals: "Flash Deals title",
+    sectionTrending: "Trending title",
+    sectionRecentlyViewed: "Recently Viewed title",
+    searchPlaceholder: "Search placeholder",
+    seeAll: "See all link",
+    cartEmptyTitle: "Cart empty title",
+    cartEmptySub: "Cart empty subtitle",
+    cartBrowseButton: "Browse button",
+    proceedToCheckout: "Checkout button",
+    subtotal: "Subtotal label",
+    shipping: "Shipping label",
+    total: "Total label",
+    promoCode: "Promo code label",
+    apply: "Apply button",
+    deliveryAddress: "Delivery address",
+    paymentMethod: "Payment method",
+    billSummary: "Bill summary",
+    placeOrder: "Place order button",
+    wishlistEmptyTitle: "Wishlist empty title",
+    wishlistEmptySub: "Wishlist empty subtitle",
+    ordersEmptyTitle: "Orders empty title",
+    ordersEmptySub: "Orders empty subtitle",
+    profileWelcomePrefix: "Profile welcome prefix",
+    profileWelcomeSub: "Profile welcome subtitle",
+    signInButton: "Sign in button",
+    signUpButton: "Create account button",
+    signInTitle: "Sign in page title",
+    signInSub: "Sign in subtitle",
+    signUpTitle: "Sign up title prefix",
+    signUpSub: "Sign up subtitle",
+    emailLabel: "Email label",
+    passwordLabel: "Password label",
+    nameLabel: "Name label",
+    signOutButton: "Sign out button",
+    addToCart: "Add to cart button",
+    buyNow: "Buy now button",
+    writeReview: "Write review button",
+    reviews: "Reviews heading",
+    description: "Description heading",
+  };
+
+  const groupFields: Record<string, string[]> = {
+    Home: ["greetingSignedOut", "greetingSignedOutSub", "greetingSignedInPrefix", "sectionCategories", "sectionFlashDeals", "sectionTrending", "sectionRecentlyViewed", "searchPlaceholder", "seeAll"],
+    Cart: ["cartEmptyTitle", "cartEmptySub", "cartBrowseButton", "proceedToCheckout", "subtotal", "shipping", "total", "promoCode", "apply"],
+    Checkout: ["deliveryAddress", "paymentMethod", "billSummary", "placeOrder"],
+    Wishlist: ["wishlistEmptyTitle", "wishlistEmptySub"],
+    Orders: ["ordersEmptyTitle", "ordersEmptySub"],
+    Profile: ["profileWelcomePrefix", "profileWelcomeSub", "signInButton", "signUpButton"],
+    Auth: ["signInTitle", "signInSub", "signUpTitle", "signUpSub", "emailLabel", "passwordLabel", "nameLabel", "signOutButton"],
+    Product: ["addToCart", "buyNow", "writeReview", "reviews", "description"],
+  };
+
+  return (
+    <div className="flex-1 flex flex-col" style={{ backgroundColor: t.bg }}>
+      <div className="flex items-center gap-2 px-3 pt-10 pb-2 border-b" style={{ backgroundColor: t.surface, borderColor: t.border }}>
+        <button onClick={pop}><ChevronLeft size={18} style={{ color: t.text }} /></button>
+        <h1 className="text-[14px] font-bold flex items-center gap-1.5" style={{ color: t.text }}>
+          <Type size={15} style={{ color: t.primary }} /> Text Content
+        </h1>
+      </div>
+
+      {/* group tabs */}
+      <div className="flex gap-1.5 overflow-x-auto px-3 py-2 border-b" style={{ backgroundColor: t.surface, borderColor: t.border, scrollbarWidth: "none" }}>
+        {groups.map((g) => (
+          <button
+            key={g}
+            onClick={() => setActiveGroup(g)}
+            className="px-2.5 py-1 rounded-full text-[10px] font-bold shrink-0 transition"
+            style={{
+              backgroundColor: activeGroup === g ? t.primary : t.surfaceAlt,
+              color: activeGroup === g ? "#fff" : t.muted,
+            }}
+          >
+            {g}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex-1 overflow-y-auto p-3 space-y-2.5">
+        {groupFields[activeGroup]?.map((key) => (
+          <div key={key}>
+            <label className="text-[9px] font-bold uppercase tracking-wide mb-1 block" style={{ color: t.muted }}>
+              {fieldLabels[key] || key}
+            </label>
+            <input
+              value={getValue(key)}
+              onChange={(e) => setOverrides((o) => ({ ...o, [key]: e.target.value }))}
+              className="w-full px-3 py-2.5 rounded-xl text-[11px] outline-none"
+              style={{ backgroundColor: t.surfaceAlt, color: t.text, border: `1px solid ${key in overrides ? t.primary : t.border}` }}
+            />
+          </div>
+        ))}
+
+        {msg && (
+          <p className="text-[10px] text-center font-medium pt-1" style={{ color: msg.includes("Saved") ? t.primary : "#ef4444" }}>{msg}</p>
+        )}
+      </div>
+
+      <div className="p-3 border-t" style={{ backgroundColor: t.surface, borderColor: t.border, paddingBottom: 14 }}>
+        <button onClick={handleSave} disabled={saving} className="w-full py-2.5 rounded-xl text-[11px] font-bold text-white flex items-center justify-center gap-1.5" style={{ backgroundColor: t.primary, opacity: saving ? 0.6 : 1 }}>
+          {saving ? <><Loader2 size={13} className="animate-spin" /> Saving...</> : <><Save size={13} /> Save All Changes</>}
         </button>
       </div>
     </div>
@@ -2246,6 +2398,7 @@ function CurrentScreen() {
     case "SignUp": return <SignUpScreen />;
     case "AdminPanel": return <AdminPanelScreen />;
     case "AdminBranding": return <AdminBrandingScreen />;
+    case "AdminTexts": return <AdminTextsScreen />;
     case "AdminAnalytics": return <AdminAnalyticsScreen />;
     default: return <HomeScreen />;
   }
@@ -2260,7 +2413,7 @@ export function PhonePreview() {
   const top = stack[stack.length - 1];
   const loadConfig = useConfigStore((s) => s.load);
   const configLoaded = useConfigStore((s) => s.loaded);
-  const hideBottomNav = ["ProductDetail", "Checkout", "OrderSuccess", "Search", "OrderDetail", "RecentlyViewed", "Settings", "WriteReview", "SignIn", "SignUp", "AdminPanel", "AdminBranding", "AdminAnalytics"].includes(top.screen);
+  const hideBottomNav = ["ProductDetail", "Checkout", "OrderSuccess", "Search", "OrderDetail", "RecentlyViewed", "Settings", "WriteReview", "SignIn", "SignUp", "AdminPanel", "AdminBranding", "AdminTexts", "AdminAnalytics"].includes(top.screen);
   const lightStatusText = top.screen === "Home" || top.screen === "Profile" || top.screen === "OrderDetail";
 
   useEffect(() => {
