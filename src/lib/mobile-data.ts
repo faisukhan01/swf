@@ -78,7 +78,7 @@ export const banners: Banner[] = [
     title: "Free Shipping Weekend",
     subtitle: "On all orders above $35",
     cta: "Start Shopping",
-    image: "https://images.unsplash.com/photo-1555721288-52c1c0c5b7f9?w=800",
+    image: "/brand/free-shipping.png",
     color: "#8b5cf6",
   },
 ];
@@ -135,6 +135,16 @@ export const products: Product[] = [
   { id: "p-gr-02", name: "Organic Manuka Honey 500g", categoryId: "grocery", price: 34.0, rating: 4.6, reviewCount: 488, images: ["https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=600"], description: "Pure New Zealand Manuka honey, UMF 10+ certified. Raw, unpasteurized, and traceable to the hive.", inStock: true },
   { id: "p-gr-03", name: "Artisan Dark Chocolate Box", categoryId: "grocery", price: 19.99, oldPrice: 24.99, rating: 4.8, reviewCount: 622, images: ["https://images.unsplash.com/photo-1548907040-4baa42d10919?w=600"], description: "A curated box of 12 single-origin dark chocolates (70-85% cacao) from award-winning chocolatiers.", inStock: true, badge: "Hot" },
 ];
+
+// Ensure every product has at least 4 gallery images by padding with
+// stable, always-loading seeded images (unique per product + index).
+const MIN_GALLERY = 4;
+for (const p of products) {
+  const need = MIN_GALLERY - p.images.length;
+  for (let i = 0; i < need; i++) {
+    p.images.push(`https://picsum.photos/seed/${p.id}-${p.images.length + i}/600/600`);
+  }
+}
 
 export const productMap: Record<string, Product> = Object.fromEntries(
   products.map((p) => [p.id, p])

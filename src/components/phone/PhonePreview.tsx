@@ -77,6 +77,22 @@ function Stars({ rating, size = 10 }: { rating: number; size?: number }) {
 
 /* ---------------- product card ---------------- */
 
+function GalleryImage({ src, alt, fallback, className, priority }: { src: string; alt: string; fallback: string; className?: string; priority?: boolean }) {
+  const [failed, setFailed] = useState(false);
+  return (
+    <Image
+      src={failed ? fallback : src}
+      alt={alt}
+      fill
+      sizes="320px"
+      className={className ?? "object-cover"}
+      unoptimized
+      priority={priority}
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function ProductCard({ p, onClick }: { p: Product; onClick: () => void }) {
   const t = useTheme();
   const wished = useMobileStore((s) => s.wishlist.includes(p.id));
@@ -88,7 +104,7 @@ function ProductCard({ p, onClick }: { p: Product; onClick: () => void }) {
       style={{ backgroundColor: t.surface, boxShadow: t.cardShadow }}
     >
       <div className="relative aspect-square" style={{ backgroundColor: t.surfaceAlt }}>
-        <Image src={p.images[0]} alt={p.name} fill sizes="200px" className="object-cover" unoptimized />
+        <GalleryImage src={p.images[0]} alt={p.name} fallback={`https://picsum.photos/seed/${p.id}/600/600`} />
         {p.badge && (
           <div className="absolute top-2 left-2">
             <Badge label={p.badge} />
@@ -216,7 +232,7 @@ function BannerCarousel() {
   const b = banners[idx];
   return (
     <div className="relative w-full h-full">
-      <Image src={b.image} alt={b.title} fill sizes="320px" className="object-cover" unoptimized />
+      <GalleryImage src={b.image} alt={b.title} fallback="/brand/free-shipping.png" />
       <div className="absolute inset-0" style={{ background: `linear-gradient(90deg, ${b.color}cc 0%, ${b.color}55 60%, transparent 100%)` }} />
       <div className="absolute inset-0 p-3 flex flex-col justify-center">
         <p className="text-[13px] font-bold text-white max-w-[60%] leading-tight">{b.title}</p>
@@ -414,21 +430,37 @@ function ProductDetailScreen({ id }: { id: string }) {
   return (
     <div className="flex-1 flex flex-col">
       <div className="flex-1 overflow-y-auto">
-        <div className="relative aspect-square" style={{ backgroundColor: t.surfaceAlt }}>
-          <Image src={p.images[imgIdx]} alt={p.name} fill sizes="320px" className="object-cover" unoptimized priority />
-          <button onClick={() => useMobileStore.getState().pop()} className="absolute top-10 left-3 w-8 h-8 rounded-full flex items-center justify-center bg-white/90">
-            <ChevronLeft size={18} className="text-slate-700" />
-          </button>
-          <button onClick={() => toggleWishlist(p.id)} className="absolute top-10 right-3 w-8 h-8 rounded-full flex items-center justify-center bg-white/90">
-            <Heart size={16} className={wished ? "fill-rose-500 text-rose-500" : "text-slate-700"} />
-          </button>
-          {p.images.length > 1 && (
-            <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1">
-              {p.images.map((_, i) => (
-                <button key={i} onClick={() => setImgIdx(i)} className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: i === imgIdx ? "#fff" : "rgba(255,255,255,0.5)" }} />
-              ))}
-            </div>
-          )}
+        {/* gallery: main image + vertical thumbnail strip */}
+        <div className="flex gap-2 p-2.5" style={{ backgroundColor: t.surfaceAlt }}>
+          <div className="relative flex-1 aspect-square rounded-xl overflow-hidden" style={{ backgroundColor: t.surface }}>
+            <GalleryImage src={p.images[imgIdx]} alt={p.name} fallback={`https://picsum.photos/seed/${p.id}/600/600`} priority />
+            <button onClick={() => useMobileStore.getState().pop()} className="absolute top-2.5 left-2.5 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md" style={{ backgroundColor: "rgba(255,255,255,0.9)" }}>
+              <ChevronLeft size={18} className="text-slate-700" />
+            </button>
+            <button onClick={() => toggleWishlist(p.id)} className="absolute top-2.5 right-2.5 w-8 h-8 rounded-full flex items-center justify-center backdrop-blur-md" style={{ backgroundColor: "rgba(255,255,255,0.9)" }}>
+              <Heart size={16} className={wished ? "fill-rose-500 text-rose-500" : "text-slate-700"} />
+            </button>
+            {/* image counter badge */}
+            <span className="absolute bottom-2.5 left-2.5 text-[9px] font-bold px-2 py-0.5 rounded-full text-white" style={{ backgroundColor: "rgba(0,0,0,0.55)" }}>
+              {imgIdx + 1} / {p.images.length}
+            </span>
+          </div>
+          {/* thumbnail strip */}
+          <div className="flex flex-col gap-1.5 w-12">
+            {p.images.map((img, i) => (
+              <button
+                key={i}
+                onClick={() => setImgIdx(i)}
+                className="relative w-12 h-12 rounded-lg overflow-hidden transition"
+                style={{
+                  border: i === imgIdx ? `2px solid ${t.primary}` : `1px solid ${t.border}`,
+                  opacity: i === imgIdx ? 1 : 0.6,
+                }}
+              >
+                <GalleryImage src={img} alt={`${p.name} ${i + 1}`} fallback={`https://picsum.photos/seed/${p.id}-${i}/600/600`} />
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="p-3">
