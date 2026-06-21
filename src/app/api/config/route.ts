@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { db } from "@/lib/db";
+import { mergeTexts } from "@/lib/app-texts";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,13 @@ export async function GET() {
     db.coupon.findMany(),
   ]);
 
+  let textsOverrides: Record<string, string> | null = null;
+  try {
+    textsOverrides = config?.texts ? JSON.parse(config.texts) : null;
+  } catch {
+    textsOverrides = null;
+  }
+
   return NextResponse.json({
     brand: {
       appName: config?.appName ?? "Shop With Faisu!!",
@@ -27,6 +35,7 @@ export async function GET() {
       darkModeDefault: config?.darkModeDefault ?? false,
     },
     currency: config?.currency ?? "USD",
+    texts: mergeTexts(textsOverrides),
     categories: categories.map((c) => ({ id: c.id, name: c.name, icon: c.icon, color: c.color })),
     products: products.map((p) => ({
       id: p.id,

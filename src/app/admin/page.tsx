@@ -30,7 +30,10 @@ import {
   UserPlus,
   TrendingUp,
   Activity,
+  Type,
+  RotateCcw,
 } from "lucide-react";
+import { textLabels, defaultTexts, type TextKey } from "@/lib/app-texts";
 
 // =====================================================================
 // Types
@@ -39,6 +42,7 @@ import {
 type Section =
   | "dashboard"
   | "branding"
+  | "texts"
   | "banners"
   | "products"
   | "categories"
@@ -115,6 +119,7 @@ const NAV_ITEMS: {
   { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
   { id: "analytics", label: "Analytics", icon: BarChart3 },
   { id: "branding", label: "Branding & Theme", icon: Palette },
+  { id: "texts", label: "Text Content", icon: Type },
   { id: "banners", label: "Banners", icon: ImageIcon },
   { id: "products", label: "Products", icon: Package },
   { id: "categories", label: "Categories", icon: Tags },
@@ -811,6 +816,211 @@ function BrandingSection() {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// =====================================================================
+// Section: Text Content
+// =====================================================================
+
+function TextsSection() {
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [resetting, setResetting] = useState(false);
+
+  const refresh = useCallback(async () => {
+    setLoading(true);
+    try {
+      const res = await fetch("/api/admin/config");
+      const data = (await res.json()) as { texts?: string | null };
+      let parsed: Record<string, string> = {};
+      if (data.texts) {
+        try {
+          const obj = JSON.parse(data.texts) as unknown;
+          if (obj && typeof obj === "object") {
+            for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+              if (typeof v === "string") parsed[k] = v;
+            }
+          }
+        } catch {
+          parsed = {};
+        }
+      }
+      setValues(parsed);
+    } catch {
+      toast.error("Failed to load text content");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    refresh();
+  }, [refresh]);
+
+  // Group text fields by their group name (preserve order of first occurrence).
+  const grouped = useMemo(() => {
+    const map = new Map<string, { key: TextKey; label: string }[]>();
+    for (const item of textLabels) {
+      const arr = map.get(item.group) ?? [];
+      arr.push({ key: item.key, label: item.label });
+      map.set(item.group, arr);
+    }
+    return Array.from(map.entries());
+  }, []);
+
+  const getValue = (key: TextKey) => values[key] ?? defaultTexts[key];
+
+  const handleChange = (key: string, v: string) => {
+    setValues((prev) => ({ ...prev, [key]: v }));
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const payload: Record<string, string> = {};
+      for (const item of textLabels) {
+        payload[item.key] = values[item.key] ?? "";
+      }
+      const res = await fetch("/api/admin/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texts: payload }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Save failed");
+      }
+      toast.success("Text content saved successfully");
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to save");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleReset = async () => {
+    if (
+      !window.confirm(
+        "Reset ALL text overrides to their default values? This cannot be undone."
+      )
+    )
+      return;
+    setResetting(true);
+    try {
+      const res = await fetch("/api/admin/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ texts: {} }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || "Reset failed");
+      }
+      toast.success("Text content reset to defaults");
+      await refresh();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed to reset");
+    } finally {
+      setResetting(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div>
+        <SectionHeader title="Text Content" />
+        <div className={`${cardClass} p-10 flex items-center justify-center`}>
+          <Spinner className="text-emerald-400" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <SectionHeader
+        title="Text Content"
+        subtitle="Override the app's default text strings across screens"
+        action={
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={handleReset}
+              disabled={resetting || saving}
+              className={ghostBtnClass}
+            >
+              {resetting ? (
+                <>
+                  <Spinner /> Resetting...
+                </>
+              ) : (
+                <>
+                  <RotateCcw size={15} /> Reset to defaults
+                </>
+              )}
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving}
+              className={primaryBtnClass}
+            >
+              {saving ? (
+                <>
+                  <Spinner /> Saving...
+                </>
+              ) : (
+                <>
+                  <Save size={15} /> Save Changes
+                </>
+              )}
+            </button>
+          </div>
+        }
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {grouped.map(([groupName, fields]) => (
+          <div key={groupName} className={`${cardClass} p-5 sm:p-6 space-y-4`}>
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+                <Type size={15} />
+              </div>
+              <h3 className="text-sm font-semibold text-white">{groupName}</h3>
+              <span className="ml-auto text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+                {fields.length} {fields.length === 1 ? "field" : "fields"}
+              </span>
+            </div>
+            <div className="space-y-3">
+              {fields.map((f) => {
+                const overridden = values[f.key] !== undefined;
+                return (
+                  <Field
+                    key={f.key}
+                    label={f.label}
+                    hint={
+                      overridden
+                        ? "Custom override"
+                        : "Using default value"
+                    }
+                  >
+                    <input
+                      className={`${inputClass} ${
+                        overridden ? "border-emerald-500/30" : ""
+                      }`}
+                      value={getValue(f.key)}
+                      onChange={(e) => handleChange(f.key, e.target.value)}
+                      placeholder={defaultTexts[f.key]}
+                    />
+                  </Field>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
@@ -2480,6 +2690,7 @@ export default function AdminDashboard() {
             <DashboardSection onNavigate={navigate} />
           )}
           {active === "branding" && <BrandingSection />}
+          {active === "texts" && <TextsSection />}
           {active === "banners" && <BannersSection />}
           {active === "products" && <ProductsSection />}
           {active === "categories" && <CategoriesSection />}

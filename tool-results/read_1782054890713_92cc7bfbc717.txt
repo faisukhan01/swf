@@ -1,0 +1,2002 @@
+     1→     1→"use client";
+     2→     2→
+     3→     3→import { useCallback, useEffect, useMemo, useState } from "react";
+     4→     4→import { useRouter } from "next/navigation";
+     5→     5→import { toast, Toaster as SonnerToaster } from "sonner";
+     6→     6→import {
+     7→     7→  LayoutDashboard,
+     8→     8→  Palette,
+     9→     9→  Image as ImageIcon,
+    10→    10→  Package,
+    11→    11→  Tags,
+    12→    12→  Ticket,
+    13→    13→  LogOut,
+    14→    14→  Menu,
+    15→    15→  X,
+    16→    16→  Plus,
+    17→    17→  Trash2,
+    18→    18→  Pencil,
+    19→    19→  Save,
+    20→    20→  Check,
+    21→    21→  Loader2,
+    22→    22→  ExternalLink,
+    23→    23→  Search,
+    24→    24→  Shield,
+    25→    25→  ChevronRight,
+    26→    26→  AlertCircle,
+    27→    27→  BarChart3,
+    28→    28→  Users,
+    29→    29→  LogIn,
+    30→    30→  UserPlus,
+    31→    31→  TrendingUp,
+    32→    32→  Activity,
+    33→    33→} from "lucide-react";
+    34→    34→
+    35→    35→// =====================================================================
+    36→    36→// Types
+    37→    37→// =====================================================================
+    38→    38→
+    39→    39→type Section =
+    40→    40→  | "dashboard"
+    41→    41→  | "branding"
+    42→    42→  | "banners"
+    43→    43→  | "products"
+    44→    44→  | "categories"
+    45→    45→  | "coupons"
+    46→    46→  | "analytics";
+    47→    47→
+    48→    48→interface AppConfig {
+    49→    49→  appName: string;
+    50→    50→  tagline: string;
+    51→    51→  logoUrl: string | null;
+    52→    52→  primaryColor: string;
+    53→    53→  primaryDarkColor: string;
+    54→    54→  accentColor: string;
+    55→    55→  darkModeDefault: boolean;
+    56→    56→  currency: string;
+    57→    57→}
+    58→    58→
+    59→    59→interface Banner {
+    60→    60→  id: string;
+    61→    61→  title: string;
+    62→    62→  subtitle: string;
+    63→    63→  cta: string;
+    64→    64→  image: string;
+    65→    65→  color: string;
+    66→    66→  order: number;
+    67→    67→}
+    68→    68→
+    69→    69→interface Category {
+    70→    70→  id: string;
+    71→    71→  name: string;
+    72→    72→  icon: string;
+    73→    73→  color: string;
+    74→    74→  order: number;
+    75→    75→}
+    76→    76→
+    77→    77→interface Product {
+    78→    78→  id: string;
+    79→    79→  name: string;
+    80→    80→  categoryId: string;
+    81→    81→  price: number;
+    82→    82→  oldPrice: number | null;
+    83→    83→  rating: number;
+    84→    84→  reviewCount: number;
+    85→    85→  images: string[];
+    86→    86→  description: string;
+    87→    87→  colors?: string[];
+    88→    88→  sizes?: string[];
+    89→    89→  inStock: boolean;
+    90→    90→  badge?: string;
+    91→    91→  createdAt: string;
+    92→    92→}
+    93→    93→
+    94→    94→type CouponType = "percent" | "flat" | "shipping";
+    95→    95→
+    96→    96→interface Coupon {
+    97→    97→  code: string;
+    98→    98→  description: string;
+    99→    99→  minSubtotal: number;
+   100→   100→  type: CouponType;
+   101→   101→  value: number;
+   102→   102→}
+   103→   103→
+   104→   104→// =====================================================================
+   105→   105→// Constants
+   106→   106→// =====================================================================
+   107→   107→
+   108→   108→const CURRENCIES = ["USD", "PKR", "AED", "EUR", "GBP"] as const;
+   109→   109→
+   110→   110→const NAV_ITEMS: {
+   111→   111→  id: Section;
+   112→   112→  label: string;
+   113→   113→  icon: typeof LayoutDashboard;
+   114→   114→}[] = [
+   115→   115→  { id: "dashboard", label: "Dashboard", icon: LayoutDashboard },
+   116→   116→  { id: "analytics", label: "Analytics", icon: BarChart3 },
+   117→   117→  { id: "branding", label: "Branding & Theme", icon: Palette },
+   118→   118→  { id: "banners", label: "Banners", icon: ImageIcon },
+   119→   119→  { id: "products", label: "Products", icon: Package },
+   120→   120→  { id: "categories", label: "Categories", icon: Tags },
+   121→   121→  { id: "coupons", label: "Coupons", icon: Ticket },
+   122→   122→];
+   123→   123→
+   124→   124→// =====================================================================
+   125→   125→// Shared UI primitives
+   126→   126→// =====================================================================
+   127→   127→
+   128→   128→const inputClass =
+   129→   129→  "w-full px-3.5 py-2.5 rounded-xl bg-white/5 border border-white/10 text-white placeholder:text-slate-500 focus:outline-none focus:border-emerald-500/50 focus:ring-2 focus:ring-emerald-500/20 transition text-sm";
+   130→   130→
+   131→   131→const labelClass = "text-xs font-semibold text-slate-300 mb-1.5 block";
+   132→   132→
+   133→   133→const cardClass =
+   134→   134→  "bg-white/[0.03] backdrop-blur-xl border border-white/10 rounded-2xl";
+   135→   135→
+   136→   136→const primaryBtnClass =
+   137→   137→  "inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-semibold text-sm shadow-lg shadow-emerald-500/30 transition disabled:opacity-60 disabled:cursor-not-allowed";
+   138→   138→
+   139→   139→const ghostBtnClass =
+   140→   140→  "inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-200 font-medium text-sm transition";
+   141→   141→
+   142→   142→const dangerBtnClass =
+   143→   143→  "inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 text-rose-300 font-medium text-sm transition";
+   144→   144→
+   145→   145→function Spinner({ className = "" }: { className?: string }) {
+   146→   146→  return <Loader2 className={`animate-spin ${className}`} size={18} />;
+   147→   147→}
+   148→   148→
+   149→   149→function Field({
+   150→   150→  label,
+   151→   151→  children,
+   152→   152→  hint,
+   153→   153→}: {
+   154→   154→  label: string;
+   155→   155→  children: React.ReactNode;
+   156→   156→  hint?: string;
+   157→   157→}) {
+   158→   158→  return (
+   159→   159→    <div>
+   160→   160→      <label className={labelClass}>{label}</label>
+   161→   161→      {children}
+   162→   162→      {hint && <p className="text-[11px] text-slate-500 mt-1">{hint}</p>}
+   163→   163→    </div>
+   164→   164→  );
+   165→   165→}
+   166→   166→
+   167→   167→function ColorField({
+   168→   168→  label,
+   169→   169→  value,
+   170→   170→  onChange,
+   171→   171→}: {
+   172→   172→  label: string;
+   173→   173→  value: string;
+   174→   174→  onChange: (v: string) => void;
+   175→   175→}) {
+   176→   176→  const safe = value && /^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(value) ? value : "#10b981";
+   177→   177→  return (
+   178→   178→    <div>
+   179→   179→      <label className={labelClass}>{label}</label>
+   180→   180→      <div className="flex gap-2 items-center">
+   181→   181→        <div className="relative">
+   182→   182→          <input
+   183→   183→            type="color"
+   184→   184→            value={safe}
+   185→   185→            onChange={(e) => onChange(e.target.value)}
+   186→   186→            className="h-10 w-12 rounded-lg bg-white/5 border border-white/10 cursor-pointer p-1"
+   187→   187→            aria-label={`${label} color picker`}
+   188→   188→          />
+   189→   189→        </div>
+   190→   190→        <input
+   191→   191→          type="text"
+   192→   192→          value={value}
+   193→   193→          onChange={(e) => onChange(e.target.value)}
+   194→   194→          className={`${inputClass} font-mono`}
+   195→   195→          placeholder="#10b981"
+   196→   196→        />
+   197→   197→      </div>
+   198→   198→    </div>
+   199→   199→  );
+   200→   200→}
+   201→   201→
+   202→   202→function Toggle({
+   203→   203→  checked,
+   204→   204→  onChange,
+   205→   205→  label,
+   206→   206→}: {
+   207→   207→  checked: boolean;
+   208→   208→  onChange: (v: boolean) => void;
+   209→   209→  label?: string;
+   210→   210→}) {
+   211→   211→  return (
+   212→   212→    <button
+   213→   213→      type="button"
+   214→   214→      role="switch"
+   215→   215→      aria-checked={checked}
+   216→   216→      aria-label={label}
+   217→   217→      onClick={() => onChange(!checked)}
+   218→   218→      className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition ${
+   219→   219→        checked ? "bg-emerald-500" : "bg-white/10"
+   220→   220→      }`}
+   221→   221→    >
+   222→   222→      <span
+   223→   223→        className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition ${
+   224→   224→          checked ? "translate-x-6" : "translate-x-1"
+   225→   225→        }`}
+   226→   226→      />
+   227→   227→    </button>
+   228→   228→  );
+   229→   229→}
+   230→   230→
+   231→   231→function Modal({
+   232→   232→  open,
+   233→   233→  onClose,
+   234→   234→  title,
+   235→   235→  children,
+   236→   236→  maxWidth = "max-w-lg",
+   237→   237→}: {
+   238→   238→  open: boolean;
+   239→   239→  onClose: () => void;
+   240→   240→  title: string;
+   241→   241→  children: React.ReactNode;
+   242→   242→  maxWidth?: string;
+   243→   243→}) {
+   244→   244→  useEffect(() => {
+   245→   245→    if (!open) return;
+   246→   246→    const onKey = (e: KeyboardEvent) => {
+   247→   247→      if (e.key === "Escape") onClose();
+   248→   248→    };
+   249→   249→    window.addEventListener("keydown", onKey);
+   250→   250→    document.body.style.overflow = "hidden";
+   251→   251→    return () => {
+   252→   252→      window.removeEventListener("keydown", onKey);
+   253→   253→      document.body.style.overflow = "";
+   254→   254→    };
+   255→   255→  }, [open, onClose]);
+   256→   256→
+   257→   257→  if (!open) return null;
+   258→   258→  return (
+   259→   259→    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+   260→   260→      <div
+   261→   261→        className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+   262→   262→        onClick={onClose}
+   263→   263→        aria-hidden="true"
+   264→   264→      />
+   265→   265→      <div
+   266→   266→        className={`relative w-full ${maxWidth} ${cardClass} shadow-2xl max-h-[90vh] flex flex-col`}
+   267→   267→        role="dialog"
+   268→   268→        aria-modal="true"
+   269→   269→      >
+   270→   270→        <div className="flex items-center justify-between p-5 border-b border-white/10">
+   271→   271→          <h3 className="text-white font-semibold text-base">{title}</h3>
+   272→   272→          <button
+   273→   273→            onClick={onClose}
+   274→   274→            className="text-slate-400 hover:text-white transition"
+   275→   275→            aria-label="Close"
+   276→   276→          >
+   277→   277→            <X size={18} />
+   278→   278→          </button>
+   279→   279→        </div>
+   280→   280→        <div className="p-5 overflow-y-auto">{children}</div>
+   281→   281→      </div>
+   282→   282→    </div>
+   283→   283→  );
+   284→   284→}
+   285→   285→
+   286→   286→function SectionHeader({
+   287→   287→  title,
+   288→   288→  subtitle,
+   289→   289→  action,
+   290→   290→}: {
+   291→   291→  title: string;
+   292→   292→  subtitle?: string;
+   293→   293→  action?: React.ReactNode;
+   294→   294→}) {
+   295→   295→  return (
+   296→   296→    <div className="flex items-start justify-between gap-4 mb-6 flex-wrap">
+   297→   297→      <div>
+   298→   298→        <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+   299→   299→          {title}
+   300→   300→        </h1>
+   301→   301→        {subtitle && <p className="text-sm text-slate-400 mt-1">{subtitle}</p>}
+   302→   302→      </div>
+   303→   303→      {action}
+   304→   304→    </div>
+   305→   305→  );
+   306→   306→}
+   307→   307→
+   308→   308→function EmptyState({
+   309→   309→  icon: Icon,
+   310→   310→  title,
+   311→   311→  subtitle,
+   312→   312→}: {
+   313→   313→  icon: typeof Package;
+   314→   314→  title: string;
+   315→   315→  subtitle?: string;
+   316→   316→}) {
+   317→   317→  return (
+   318→   318→    <div className="text-center py-16 px-4">
+   319→   319→      <div className="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 mx-auto flex items-center justify-center mb-4">
+   320→   320→        <Icon className="text-slate-500" size={24} />
+   321→   321→      </div>
+   322→   322→      <p className="text-slate-300 font-medium">{title}</p>
+   323→   323→      {subtitle && <p className="text-slate-500 text-sm mt-1">{subtitle}</p>}
+   324→   324→    </div>
+   325→   325→  );
+   326→   326→}
+   327→   327→
+   328→   328→function ImageThumb({
+   329→   329→  src,
+   330→   330→  alt,
+   331→   331→  className = "",
+   332→   332→}: {
+   333→   333→  src: string;
+   334→   334→  alt: string;
+   335→   335→  className?: string;
+   336→   336→}) {
+   337→   337→  const [errored, setErrored] = useState(false);
+   338→   338→  if (!src || errored) {
+   339→   339→    return (
+   340→   340→      <div
+   341→   341→        className={`bg-white/5 border border-white/10 flex items-center justify-center ${className}`}
+   342→   342→      >
+   343→   343→        <ImageIcon className="text-slate-600" size={16} />
+   344→   344→      </div>
+   345→   345→    );
+   346→   346→  }
+   347→   347→  return (
+   348→   348→    <img
+   349→   349→      src={src}
+   350→   350→      alt={alt}
+   351→   351→      onError={() => setErrored(true)}
+   352→   352→      className={`object-cover ${className}`}
+   353→   353→      loading="lazy"
+   354→   354→    />
+   355→   355→  );
+   356→   356→}
+   357→   357→
+   358→   358→// =====================================================================
+   359→   359→// Section: Dashboard
+   360→   360→// =====================================================================
+   361→   361→
+   362→   362→function DashboardSection({
+   363→   363→  onNavigate,
+   364→   364→}: {
+   365→   365→  onNavigate: (s: Section) => void;
+   366→   366→}) {
+   367→   367→  const [stats, setStats] = useState<{
+   368→   368→    products: number;
+   369→   369→    categories: number;
+   370→   370→    banners: number;
+   371→   371→    coupons: number;
+   372→   372→  }>({ products: 0, categories: 0, banners: 0, coupons: 0 });
+   373→   373→  const [loading, setLoading] = useState(true);
+   374→   374→
+   375→   375→  useEffect(() => {
+   376→   376→    let cancelled = false;
+   377→   377→    (async () => {
+   378→   378→      setLoading(true);
+   379→   379→      try {
+   380→   380→        const [p, c, b, co] = await Promise.all([
+   381→   381→          fetch("/api/admin/products").then((r) => r.json()),
+   382→   382→          fetch("/api/admin/categories").then((r) => r.json()),
+   383→   383→          fetch("/api/admin/banners").then((r) => r.json()),
+   384→   384→          fetch("/api/admin/coupons").then((r) => r.json()),
+   385→   385→        ]);
+   386→   386→        if (!cancelled) {
+   387→   387→          setStats({
+   388→   388→            products: Array.isArray(p) ? p.length : 0,
+   389→   389→            categories: Array.isArray(c) ? c.length : 0,
+   390→   390→            banners: Array.isArray(b) ? b.length : 0,
+   391→   391→            coupons: Array.isArray(co) ? co.length : 0,
+   392→   392→          });
+   393→   393→        }
+   394→   394→      } catch {
+   395→   395→        if (!cancelled) toast.error("Failed to load stats");
+   396→   396→      } finally {
+   397→   397→        if (!cancelled) setLoading(false);
+   398→   398→      }
+   399→   399→    })();
+   400→   400→    return () => {
+   401→   401→      cancelled = true;
+   402→   402→    };
+   403→   403→  }, []);
+   404→   404→
+   405→   405→  const cards = [
+   406→   406→    {
+   407→   407→      label: "Products",
+   408→   408→      value: stats.products,
+   409→   409→      icon: Package,
+   410→   410→      tint: "from-emerald-500/20 to-emerald-600/5",
+   411→   411→      ring: "text-emerald-400",
+   412→   412→      section: "products" as Section,
+   413→   413→    },
+   414→   414→    {
+   415→   415→      label: "Categories",
+   416→   416→      value: stats.categories,
+   417→   417→      icon: Tags,
+   418→   418→      tint: "from-amber-500/20 to-amber-600/5",
+   419→   419→      ring: "text-amber-400",
+   420→   420→      section: "categories" as Section,
+   421→   421→    },
+   422→   422→    {
+   423→   423→      label: "Banners",
+   424→   424→      value: stats.banners,
+   425→   425→      icon: ImageIcon,
+   426→   426→      tint: "from-sky-500/20 to-sky-600/5",
+   427→   427→      ring: "text-sky-400",
+   428→   428→      section: "banners" as Section,
+   429→   429→    },
+   430→   430→    {
+   431→   431→      label: "Coupons",
+   432→   432→      value: stats.coupons,
+   433→   433→      icon: Ticket,
+   434→   434→      tint: "from-fuchsia-500/20 to-fuchsia-600/5",
+   435→   435→      ring: "text-fuchsia-400",
+   436→   436→      section: "coupons" as Section,
+   437→   437→    },
+   438→   438→  ];
+   439→   439→
+   440→   440→  const quickActions: { label: string; desc: string; section: Section; icon: typeof Package }[] = [
+   441→   441→    { label: "Edit Branding", desc: "App name, colors, currency", section: "branding", icon: Palette },
+   442→   442→    { label: "Manage Banners", desc: "Promo carousel slides", section: "banners", icon: ImageIcon },
+   443→   443→    { label: "Manage Products", desc: "Add, edit, remove items", section: "products", icon: Package },
+   444→   444→    { label: "Manage Categories", desc: "Organize catalog", section: "categories", icon: Tags },
+   445→   445→    { label: "Manage Coupons", desc: "Discounts & promos", section: "coupons", icon: Ticket },
+   446→   446→  ];
+   447→   447→
+   448→   448→  return (
+   449→   449→    <div>
+   450→   450→      <SectionHeader
+   451→   451→        title="Dashboard"
+   452→   452→        subtitle="Overview of your store at a glance"
+   453→   453→        action={
+   454→   454→          <a
+   455→   455→            href="/"
+   456→   456→            target="_blank"
+   457→   457→            rel="noopener noreferrer"
+   458→   458→            className={primaryBtnClass}
+   459→   459→          >
+   460→   460→            <ExternalLink size={15} /> Live Preview
+   461→   461→          </a>
+   462→   462→        }
+   463→   463→      />
+   464→   464→
+   465→   465→      {/* Stats */}
+   466→   466→      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+   467→   467→        {cards.map((c) => (
+   468→   468→          <button
+   469→   469→            key={c.label}
+   470→   470→            onClick={() => onNavigate(c.section)}
+   471→   471→            className={`${cardClass} p-5 text-left hover:border-white/20 transition group relative overflow-hidden`}
+   472→   472→          >
+   473→   473→            <div
+   474→   474→              className={`absolute -top-8 -right-8 w-28 h-28 rounded-full bg-gradient-to-br ${c.tint} blur-2xl opacity-70 group-hover:opacity-100 transition`}
+   475→   475→            />
+   476→   476→            <div className="relative">
+   477→   477→              <div
+   478→   478→                className={`w-10 h-10 rounded-xl bg-white/5 border border-white/10 flex items-center justify-center mb-3 ${c.ring}`}
+   479→   479→              >
+   480→   480→                <c.icon size={18} />
+   481→   481→              </div>
+   482→   482→              <div className="text-3xl font-extrabold text-white">
+   483→   483→                {loading ? <Spinner className="mx-0" /> : c.value}
+   484→   484→              </div>
+   485→   485→              <div className="text-xs text-slate-400 mt-1 font-medium uppercase tracking-wider">
+   486→   486→                {c.label}
+   487→   487→              </div>
+   488→   488→            </div>
+   489→   489→          </button>
+   490→   490→        ))}
+   491→   491→      </div>
+   492→   492→
+   493→   493→      {/* Quick Actions */}
+   494→   494→      <div className={`${cardClass} p-5 sm:p-6 mb-6`}>
+   495→   495→        <h2 className="text-sm font-semibold text-white mb-4">Quick Actions</h2>
+   496→   496→        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+   497→   497→          {quickActions.map((a) => (
+   498→   498→            <button
+   499→   499→              key={a.label}
+   500→   500→              onClick={() => onNavigate(a.section)}
+   501→   501→              className="flex items-center gap-3 p-3.5 rounded-xl bg-white/[0.02] hover:bg-white/[0.06] border border-white/5 hover:border-white/15 transition text-left group"
+   502→   502→            >
+   503→   503→              <div className="w-9 h-9 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400 shrink-0">
+   504→   504→                <a.icon size={16} />
+   505→   505→              </div>
+   506→   506→              <div className="flex-1 min-w-0">
+   507→   507→                <div className="text-sm font-semibold text-white truncate">
+   508→   508→                  {a.label}
+   509→   509→                </div>
+   510→   510→                <div className="text-xs text-slate-400 truncate">{a.desc}</div>
+   511→   511→              </div>
+   512→   512→              <ChevronRight
+   513→   513→                size={16}
+   514→   514→                className="text-slate-500 group-hover:text-white group-hover:translate-x-0.5 transition"
+   515→   515→              />
+   516→   516→            </button>
+   517→   517→          ))}
+   518→   518→        </div>
+   519→   519→      </div>
+   520→   520→
+   521→   521→      {/* Live preview CTA */}
+   522→   522→      <div
+   523→   523→        className={`${cardClass} p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4`}
+   524→   524→      >
+   525→   525→        <div>
+   526→   526→          <h3 className="text-white font-semibold">See it live</h3>
+   527→   527→          <p className="text-sm text-slate-400 mt-1">
+   528→   528→            Open the customer-facing phone preview in a new tab to see your
+   529→   529→            changes in action.
+   530→   530→          </p>
+   531→   531→        </div>
+   532→   532→        <a
+   533→   533→          href="/"
+   534→   534→          target="_blank"
+   535→   535→          rel="noopener noreferrer"
+   536→   536→          className={ghostBtnClass}
+   537→   537→        >
+   538→   538→          <ExternalLink size={15} /> Open Preview
+   539→   539→        </a>
+   540→   540→      </div>
+   541→   541→    </div>
+   542→   542→  );
+   543→   543→}
+   544→   544→
+   545→   545→// =====================================================================
+   546→   546→// Section: Branding & Theme
+   547→   547→// =====================================================================
+   548→   548→
+   549→   549→function BrandingSection() {
+   550→   550→  const [config, setConfig] = useState<AppConfig | null>(null);
+   551→   551→  const [loading, setLoading] = useState(true);
+   552→   552→  const [saving, setSaving] = useState(false);
+   553→   553→
+   554→   554→  const refresh = useCallback(async () => {
+   555→   555→    setLoading(true);
+   556→   556→    try {
+   557→   557→      const res = await fetch("/api/admin/config");
+   558→   558→      const data = (await res.json()) as AppConfig;
+   559→   559→      setConfig({
+   560→   560→        appName: data.appName ?? "Shop With Faisu!!",
+   561→   561→        tagline: data.tagline ?? "",
+   562→   562→        logoUrl: data.logoUrl ?? null,
+   563→   563→        primaryColor: data.primaryColor ?? "#10b981",
+   564→   564→        primaryDarkColor: data.primaryDarkColor ?? "#059669",
+   565→   565→        accentColor: data.accentColor ?? "#f59e0b",
+   566→   566→        darkModeDefault: !!data.darkModeDefault,
+   567→   567→        currency: data.currency ?? "USD",
+   568→   568→      });
+   569→   569→    } catch {
+   570→   570→      toast.error("Failed to load config");
+   571→   571→    } finally {
+   572→   572→      setLoading(false);
+   573→   573→    }
+   574→   574→  }, []);
+   575→   575→
+   576→   576→  useEffect(() => {
+   577→   577→    refresh();
+   578→   578→  }, [refresh]);
+   579→   579→
+   580→   580→  const update = <K extends keyof AppConfig>(k: K, v: AppConfig[K]) => {
+   581→   581→    setConfig((prev) => (prev ? { ...prev, [k]: v } : prev));
+   582→   582→  };
+   583→   583→
+   584→   584→  const handleSave = async () => {
+   585→   585→    if (!config) return;
+   586→   586→    setSaving(true);
+   587→   587→    try {
+   588→   588→      const res = await fetch("/api/admin/config", {
+   589→   589→        method: "PUT",
+   590→   590→        headers: { "Content-Type": "application/json" },
+   591→   591→        body: JSON.stringify(config),
+   592→   592→      });
+   593→   593→      if (!res.ok) {
+   594→   594→        const err = await res.json().catch(() => ({}));
+   595→   595→        throw new Error(err.error || "Save failed");
+   596→   596→      }
+   597→   597→      toast.success("Branding saved successfully");
+   598→   598→      await refresh();
+   599→   599→    } catch (e) {
+   600→   600→      toast.error(e instanceof Error ? e.message : "Failed to save");
+   601→   601→    } finally {
+   602→   602→      setSaving(false);
+   603→   603→    }
+   604→   604→  };
+   605→   605→
+   606→   606→  if (loading || !config) {
+   607→   607→    return (
+   608→   608→      <div>
+   609→   609→        <SectionHeader title="Branding & Theme" />
+   610→   610→        <div className={`${cardClass} p-10 flex items-center justify-center`}>
+   611→   611→          <Spinner className="text-emerald-400" />
+   612→   612→        </div>
+   613→   613→      </div>
+   614→   614→    );
+   615→   615→  }
+   616→   616→
+   617→   617→  return (
+   618→   618→    <div>
+   619→   619→      <SectionHeader
+   620→   620→        title="Branding & Theme"
+   621→   621→        subtitle="Customize your app's identity, colors, and currency"
+   622→   622→        action={
+   623→   623→          <button
+   624→   624→            onClick={handleSave}
+   625→   625→            disabled={saving}
+   626→   626→            className={primaryBtnClass}
+   627→   627→          >
+   628→   628→            {saving ? (
+   629→   629→              <>
+   630→   630→                <Spinner /> Saving...
+   631→   631→              </>
+   632→   632→            ) : (
+   633→   633→              <>
+   634→   634→                <Save size={15} /> Save Changes
+   635→   635→              </>
+   636→   636→            )}
+   637→   637→          </button>
+   638→   638→        }
+   639→   639→      />
+   640→   640→
+   641→   641→      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+   642→   642→        <div className="lg:col-span-2 space-y-5">
+   643→   643→          <div className={`${cardClass} p-5 sm:p-6 space-y-4`}>
+   644→   644→            <h3 className="text-sm font-semibold text-white">Identity</h3>
+   645→   645→            <Field label="App Name">
+   646→   646→              <input
+   647→   647→                className={inputClass}
+   648→   648→                value={config.appName}
+   649→   649→                onChange={(e) => update("appName", e.target.value)}
+   650→   650→                placeholder="Shop With Faisu!!"
+   651→   651→              />
+   652→   652→            </Field>
+   653→   653→            <Field label="Tagline">
+   654→   654→              <input
+   655→   655→                className={inputClass}
+   656→   656→                value={config.tagline}
+   657→   657→                onChange={(e) => update("tagline", e.target.value)}
+   658→   658→                placeholder="Shop smart, live better"
+   659→   659→              />
+   660→   660→            </Field>
+   661→   661→            <Field label="Logo URL" hint="Leave empty to use the default shield icon">
+   662→   662→              <input
+   663→   663→                className={inputClass}
+   664→   664→                value={config.logoUrl ?? ""}
+   665→   665→                onChange={(e) =>
+   666→   666→                  update("logoUrl", e.target.value.trim() || null)
+   667→   667→                }
+   668→   668→                placeholder="https://example.com/logo.png"
+   669→   669→              />
+   670→   670→            </Field>
+   671→   671→          </div>
+   672→   672→
+   673→   673→          <div className={`${cardClass} p-5 sm:p-6 space-y-4`}>
+   674→   674→            <h3 className="text-sm font-semibold text-white">Theme Colors</h3>
+   675→   675→            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+   676→   676→              <ColorField
+   677→   677→                label="Primary Color"
+   678→   678→                value={config.primaryColor}
+   679→   679→                onChange={(v) => update("primaryColor", v)}
+   680→   680→              />
+   681→   681→              <ColorField
+   682→   682→                label="Primary Dark Color"
+   683→   683→                value={config.primaryDarkColor}
+   684→   684→                onChange={(v) => update("primaryDarkColor", v)}
+   685→   685→              />
+   686→   686→              <ColorField
+   687→   687→                label="Accent Color"
+   688→   688→                value={config.accentColor}
+   689→   689→                onChange={(v) => update("accentColor", v)}
+   690→   690→              />
+   691→   691→              <Field label="Currency">
+   692→   692→                <select
+   693→   693→                  className={inputClass}
+   694→   694→                  value={config.currency}
+   695→   695→                  onChange={(e) => update("currency", e.target.value)}
+   696→   696→                >
+   697→   697→                  {CURRENCIES.map((c) => (
+   698→   698→                    <option key={c} value={c} className="bg-slate-900">
+   699→   699→                      {c}
+   700→   700→                    </option>
+   701→   701→                  ))}
+   702→   702→                </select>
+   703→   703→              </Field>
+   704→   704→            </div>
+   705→   705→            <div className="flex items-center justify-between pt-2">
+   706→   706→              <div>
+   707→   707→                <div className="text-sm font-semibold text-white">
+   708→   708→                  Dark Mode Default
+   709→   709→                </div>
+   710→   710→                <div className="text-xs text-slate-400 mt-0.5">
+   711→   711→                  Open the app in dark mode by default
+   712→   712→                </div>
+   713→   713→              </div>
+   714→   714→              <Toggle
+   715→   715→                checked={config.darkModeDefault}
+   716→   716→                onChange={(v) => update("darkModeDefault", v)}
+   717→   717→                label="Dark mode default"
+   718→   718→              />
+   719→   719→            </div>
+   720→   720→          </div>
+   721→   721→        </div>
+   722→   722→
+   723→   723→        {/* Live preview */}
+   724→   724→        <div className="space-y-5">
+   725→   725→          <div className={`${cardClass} p-5 sm:p-6 sticky top-6`}>
+   726→   726→            <h3 className="text-sm font-semibold text-white mb-4">
+   727→   727→              Live Preview
+   728→   728→            </h3>
+   729→   729→            <div
+   730→   730→              className="rounded-2xl p-5 mb-4 relative overflow-hidden"
+   731→   731→              style={{
+   732→   732→                background: `linear-gradient(135deg, ${config.primaryColor}, ${config.primaryDarkColor})`,
+   733→   733→              }}
+   734→   734→            >
+   735→   735→              <div className="absolute inset-0 opacity-20">
+   736→   736→                <div className="absolute -top-6 -right-6 w-24 h-24 rounded-full bg-white blur-2xl" />
+   737→   737→              </div>
+   738→   738→              <div className="relative">
+   739→   739→                <div className="w-10 h-10 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-3">
+   740→   740→                  {config.logoUrl ? (
+   741→   741→                    <ImageThumb
+   742→   742→                      src={config.logoUrl}
+   743→   743→                      alt="Logo"
+   744→   744→                      className="w-full h-full rounded-xl"
+   745→   745→                    />
+   746→   746→                  ) : (
+   747→   747→                    <Shield className="text-white" size={20} />
+   748→   748→                  )}
+   749→   749→                </div>
+   750→   750→                <div className="text-white font-extrabold text-lg">
+   751→   751→                  {config.appName || "App Name"}
+   752→   752→                </div>
+   753→   753→                <div className="text-white/80 text-xs mt-0.5">
+   754→   754→                  {config.tagline || "Tagline"}
+   755→   755→                </div>
+   756→   756→                <div
+   757→   757→                  className="inline-flex items-center gap-1.5 mt-4 px-3 py-1.5 rounded-full text-xs font-bold text-slate-900"
+   758→   758→                  style={{ background: config.accentColor }}
+   759→   759→                >
+   760→   760→                  <Check size={12} /> Shop Now
+   761→   761→                </div>
+   762→   762→              </div>
+   763→   763→            </div>
+   764→   764→
+   765→   765→            <div className="space-y-2">
+   766→   766→              <div className="text-xs text-slate-400 font-semibold uppercase tracking-wider">
+   767→   767→                Swatches
+   768→   768→              </div>
+   769→   769→              <div className="grid grid-cols-3 gap-2">
+   770→   770→                {[
+   771→   771→                  { label: "Primary", color: config.primaryColor },
+   772→   772→                  { label: "Dark", color: config.primaryDarkColor },
+   773→   773→                  { label: "Accent", color: config.accentColor },
+   774→   774→                ].map((s) => (
+   775→   775→                  <div
+   776→   776→                    key={s.label}
+   777→   777→                    className="rounded-lg overflow-hidden border border-white/10"
+   778→   778→                  >
+   779→   779→                    <div
+   780→   780→                      className="h-12"
+   781→   781→                      style={{ background: s.color }}
+   782→   782→                    />
+   783→   783→                    <div className="px-2 py-1.5 bg-white/[0.02]">
+   784→   784→                      <div className="text-[10px] text-slate-400 font-medium">
+   785→   785→                        {s.label}
+   786→   786→                      </div>
+   787→   787→                      <div className="text-[10px] text-slate-500 font-mono uppercase">
+   788→   788→                        {s.color}
+   789→   789→                      </div>
+   790→   790→                    </div>
+   791→   791→                  </div>
+   792→   792→                ))}
+   793→   793→              </div>
+   794→   794→            </div>
+   795→   795→
+   796→   796→            <div className="mt-4 pt-4 border-t border-white/10 flex items-center justify-between">
+   797→   797→              <span className="text-xs text-slate-400">Currency</span>
+   798→   798→              <span className="text-sm font-semibold text-white">
+   799→   799→                {config.currency}
+   800→   800→              </span>
+   801→   801→            </div>
+   802→   802→            <div className="flex items-center justify-between mt-2">
+   803→   803→              <span className="text-xs text-slate-400">Dark mode default</span>
+   804→   804→              <span
+   805→   805→                className={`text-xs font-semibold ${
+   806→   806→                  config.darkModeDefault ? "text-emerald-400" : "text-slate-500"
+   807→   807→                }`}
+   808→   808→              >
+   809→   809→                {config.darkModeDefault ? "Enabled" : "Disabled"}
+   810→   810→              </span>
+   811→   811→            </div>
+   812→   812→          </div>
+   813→   813→        </div>
+   814→   814→      </div>
+   815→   815→    </div>
+   816→   816→  );
+   817→   817→}
+   818→   818→
+   819→   819→// =====================================================================
+   820→   820→// Section: Banners
+   821→   821→// =====================================================================
+   822→   822→
+   823→   823→interface BannerForm {
+   824→   824→  title: string;
+   825→   825→  subtitle: string;
+   826→   826→  cta: string;
+   827→   827→  image: string;
+   828→   828→  color: string;
+   829→   829→}
+   830→   830→
+   831→   831→const emptyBannerForm: BannerForm = {
+   832→   832→  title: "",
+   833→   833→  subtitle: "",
+   834→   834→  cta: "Shop Now",
+   835→   835→  image: "",
+   836→   836→  color: "#10b981",
+   837→   837→};
+   838→   838→
+   839→   839→function BannersSection() {
+   840→   840→  const [banners, setBanners] = useState<Banner[]>([]);
+   841→   841→  const [loading, setLoading] = useState(true);
+   842→   842→  const [modalOpen, setModalOpen] = useState(false);
+   843→   843→  const [editingId, setEditingId] = useState<string | null>(null);
+   844→   844→  const [form, setForm] = useState<BannerForm>(emptyBannerForm);
+   845→   845→  const [saving, setSaving] = useState(false);
+   846→   846→
+   847→   847→  const refresh = useCallback(async () => {
+   848→   848→    setLoading(true);
+   849→   849→    try {
+   850→   850→      const res = await fetch("/api/admin/banners");
+   851→   851→      const data = await res.json();
+   852→   852→      setBanners(Array.isArray(data) ? data : []);
+   853→   853→    } catch {
+   854→   854→      toast.error("Failed to load banners");
+   855→   855→    } finally {
+   856→   856→      setLoading(false);
+   857→   857→    }
+   858→   858→  }, []);
+   859→   859→
+   860→   860→  useEffect(() => {
+   861→   861→    refresh();
+   862→   862→  }, [refresh]);
+   863→   863→
+   864→   864→  const openAdd = () => {
+   865→   865→    setForm(emptyBannerForm);
+   866→   866→    setEditingId(null);
+   867→   867→    setModalOpen(true);
+   868→   868→  };
+   869→   869→
+   870→   870→  const openEdit = (b: Banner) => {
+   871→   871→    setForm({
+   872→   872→      title: b.title,
+   873→   873→      subtitle: b.subtitle,
+   874→   874→      cta: b.cta,
+   875→   875→      image: b.image,
+   876→   876→      color: b.color,
+   877→   877→    });
+   878→   878→    setEditingId(b.id);
+   879→   879→    setModalOpen(true);
+   880→   880→  };
+   881→   881→
+   882→   882→  const handleSave = async () => {
+   883→   883→    if (!form.title.trim()) {
+   884→   884→      toast.error("Title is required");
+   885→   885→      return;
+   886→   886→    }
+   887→   887→    setSaving(true);
+   888→   888→    try {
+   889→   889→      const payload = { ...form };
+   890→   890→      const isEdit = editingId !== null;
+   891→   891→      const url = "/api/admin/banners";
+   892→   892→      const method = isEdit ? "PUT" : "POST";
+   893→   893→      const body = isEdit ? { id: editingId, ...payload } : payload;
+   894→   894→      const res = await fetch(url, {
+   895→   895→        method,
+   896→   896→        headers: { "Content-Type": "application/json" },
+   897→   897→        body: JSON.stringify(body),
+   898→   898→      });
+   899→   899→      if (!res.ok) {
+   900→   900→        const err = await res.json().catch(() => ({}));
+   901→   901→        throw new Error(err.error || "Save failed");
+   902→   902→      }
+   903→   903→      toast.success(isEdit ? "Banner updated" : "Banner created");
+   904→   904→      setModalOpen(false);
+   905→   905→      await refresh();
+   906→   906→    } catch (e) {
+   907→   907→      toast.error(e instanceof Error ? e.message : "Failed to save");
+   908→   908→    } finally {
+   909→   909→      setSaving(false);
+   910→   910→    }
+   911→   911→  };
+   912→   912→
+   913→   913→  const handleDelete = async (b: Banner) => {
+   914→   914→    if (!window.confirm(`Delete banner "${b.title || b.id}"?`)) return;
+   915→   915→    try {
+   916→   916→      const res = await fetch(`/api/admin/banners?id=${encodeURIComponent(b.id)}`, {
+   917→   917→        method: "DELETE",
+   918→   918→      });
+   919→   919→      if (!res.ok) throw new Error("Delete failed");
+   920→   920→      toast.success("Banner deleted");
+   921→   921→      await refresh();
+   922→   922→    } catch {
+   923→   923→      toast.error("Failed to delete banner");
+   924→   924→    }
+   925→   925→  };
+   926→   926→
+   927→   927→  return (
+   928→   928→    <div>
+   929→   929→      <SectionHeader
+   930→   930→        title="Banners"
+   931→   931→        subtitle="Promo slides shown in the home carousel"
+   932→   932→        action={
+   933→   933→          <button onClick={openAdd} className={primaryBtnClass}>
+   934→   934→            <Plus size={15} /> Add Banner
+   935→   935→          </button>
+   936→   936→        }
+   937→   937→      />
+   938→   938→
+   939→   939→      {loading ? (
+   940→   940→        <div className={`${cardClass} p-10 flex items-center justify-center`}>
+   941→   941→          <Spinner className="text-emerald-400" />
+   942→   942→        </div>
+   943→   943→      ) : banners.length === 0 ? (
+   944→   944→        <div className={`${cardClass}`}>
+   945→   945→          <EmptyState
+   946→   946→            icon={ImageIcon}
+   947→   947→            title="No banners yet"
+   948→   948→            subtitle="Click 'Add Banner' to create your first promo slide"
+   949→   949→          />
+   950→   950→        </div>
+   951→   951→      ) : (
+   952→   952→        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+   953→   953→          {banners.map((b) => (
+   954→   954→            <div key={b.id} className={`${cardClass} overflow-hidden`}>
+   955→   955→              <div
+   956→   956→                className="relative h-32 bg-white/5"
+   957→   957→                style={{
+   958→   958→                  background: b.color
+   959→   959→                    ? `linear-gradient(135deg, ${b.color}, ${b.color}99)`
+   960→   960→                    : undefined,
+   961→   961→                }}
+   962→   962→              >
+   963→   963→                {b.image && (
+   964→   964→                  <ImageThumb
+   965→   965→                    src={b.image}
+   966→   966→                    alt={b.title}
+   967→   967→                    className="absolute inset-0 w-full h-full opacity-90"
+   968→   968→                  />
+   969→   969→                )}
+   970→   970→                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+   971→   971→                <div className="absolute bottom-2 left-3 right-3">
+   972→   972→                  <div className="text-white font-bold text-sm truncate">
+   973→   973→                    {b.title || "Untitled"}
+   974→   974→                  </div>
+   975→   975→                  {b.subtitle && (
+   976→   976→                    <div className="text-white/80 text-xs truncate">
+   977→   977→                      {b.subtitle}
+   978→   978→                    </div>
+   979→   979→                  )}
+   980→   980→                </div>
+   981→   981→              </div>
+   982→   982→              <div className="p-4">
+   983→   983→                <div className="flex items-center gap-2 mb-3">
+   984→   984→                  <span
+   985→   985→                    className="inline-block w-3 h-3 rounded-full border border-white/20"
+   986→   986→                    style={{ background: b.color }}
+   987→   987→                  />
+   988→   988→                  <span className="text-xs text-slate-400 font-mono">
+   989→   989→                    {b.color}
+   990→   990→                  </span>
+   991→   991→                  <span className="ml-auto text-[10px] text-slate-500 uppercase tracking-wider font-semibold">
+   992→   992→                    CTA: {b.cta || "—"}
+   993→   993→                  </span>
+   994→   994→                </div>
+   995→   995→                <div className="flex gap-2">
+   996→   996→                  <button
+   997→   997→                    onClick={() => openEdit(b)}
+   998→   998→                    className={`${ghostBtnClass} flex-1 !py-2`}
+   999→   999→                  >
+  1000→  1000→                    <Pencil size={13} /> Edit
+  1001→  1001→                  </button>
+  1002→  1002→                  <button
+  1003→  1003→                    onClick={() => handleDelete(b)}
+  1004→  1004→                    className={`${dangerBtnClass} !py-2 !px-3`}
+  1005→  1005→                    aria-label="Delete banner"
+  1006→  1006→                  >
+  1007→  1007→                    <Trash2 size={13} />
+  1008→  1008→                  </button>
+  1009→  1009→                </div>
+  1010→  1010→              </div>
+  1011→  1011→            </div>
+  1012→  1012→          ))}
+  1013→  1013→        </div>
+  1014→  1014→      )}
+  1015→  1015→
+  1016→  1016→      <Modal
+  1017→  1017→        open={modalOpen}
+  1018→  1018→        onClose={() => setModalOpen(false)}
+  1019→  1019→        title={editingId ? "Edit Banner" : "Add Banner"}
+  1020→  1020→      >
+  1021→  1021→        <div className="space-y-4">
+  1022→  1022→          <Field label="Title">
+  1023→  1023→            <input
+  1024→  1024→              className={inputClass}
+  1025→  1025→              value={form.title}
+  1026→  1026→              onChange={(e) => setForm({ ...form, title: e.target.value })}
+  1027→  1027→              placeholder="Flash Sale Weekend"
+  1028→  1028→            />
+  1029→  1029→          </Field>
+  1030→  1030→          <Field label="Subtitle">
+  1031→  1031→            <input
+  1032→  1032→              className={inputClass}
+  1033→  1033→              value={form.subtitle}
+  1034→  1034→              onChange={(e) => setForm({ ...form, subtitle: e.target.value })}
+  1035→  1035→              placeholder="Up to 50% off everything"
+  1036→  1036→            />
+  1037→  1037→          </Field>
+  1038→  1038→          <Field label="CTA Text">
+  1039→  1039→            <input
+  1040→  1040→              className={inputClass}
+  1041→  1041→              value={form.cta}
+  1042→  1042→              onChange={(e) => setForm({ ...form, cta: e.target.value })}
+  1043→  1043→              placeholder="Shop Now"
+  1044→  1044→            />
+  1045→  1045→          </Field>
+  1046→  1046→          <Field label="Image URL">
+  1047→  1047→            <input
+  1048→  1048→              className={inputClass}
+  1049→  1049→              value={form.image}
+  1050→  1050→              onChange={(e) => setForm({ ...form, image: e.target.value })}
+  1051→  1051→              placeholder="https://..."
+  1052→  1052→            />
+  1053→  1053→          </Field>
+  1054→  1054→          {form.image && (
+  1055→  1055→            <ImageThumb
+  1056→  1056→              src={form.image}
+  1057→  1057→              alt="Preview"
+  1058→  1058→              className="w-full h-28 rounded-xl border border-white/10"
+  1059→  1059→            />
+  1060→  1060→          )}
+  1061→  1061→          <ColorField
+  1062→  1062→            label="Accent Color"
+  1063→  1063→            value={form.color}
+  1064→  1064→            onChange={(v) => setForm({ ...form, color: v })}
+  1065→  1065→          />
+  1066→  1066→          <div className="flex gap-2 pt-2">
+  1067→  1067→            <button
+  1068→  1068→              onClick={() => setModalOpen(false)}
+  1069→  1069→              className={`${ghostBtnClass} flex-1`}
+  1070→  1070→            >
+  1071→  1071→              Cancel
+  1072→  1072→            </button>
+  1073→  1073→            <button
+  1074→  1074→              onClick={handleSave}
+  1075→  1075→              disabled={saving}
+  1076→  1076→              className={`${primaryBtnClass} flex-1`}
+  1077→  1077→            >
+  1078→  1078→              {saving ? (
+  1079→  1079→                <>
+  1080→  1080→                  <Spinner /> Saving...
+  1081→  1081→                </>
+  1082→  1082→              ) : (
+  1083→  1083→                <>
+  1084→  1084→                  <Save size={15} /> {editingId ? "Update" : "Create"}
+  1085→  1085→                </>
+  1086→  1086→              )}
+  1087→  1087→            </button>
+  1088→  1088→          </div>
+  1089→  1089→        </div>
+  1090→  1090→      </Modal>
+  1091→  1091→    </div>
+  1092→  1092→  );
+  1093→  1093→}
+  1094→  1094→
+  1095→  1095→// =====================================================================
+  1096→  1096→// Section: Products
+  1097→  1097→// =====================================================================
+  1098→  1098→
+  1099→  1099→interface ProductForm {
+  1100→  1100→  name: string;
+  1101→  1101→  categoryId: string;
+  1102→  1102→  price: string;
+  1103→  1103→  oldPrice: string;
+  1104→  1104→  rating: string;
+  1105→  1105→  reviewCount: string;
+  1106→  1106→  imagesText: string;
+  1107→  1107→  description: string;
+  1108→  1108→  colorsText: string;
+  1109→  1109→  sizesText: string;
+  1110→  1110→  badge: string;
+  1111→  1111→  inStock: boolean;
+  1112→  1112→}
+  1113→  1113→
+  1114→  1114→const emptyProductForm: ProductForm = {
+  1115→  1115→  name: "",
+  1116→  1116→  categoryId: "",
+  1117→  1117→  price: "",
+  1118→  1118→  oldPrice: "",
+  1119→  1119→  rating: "4.5",
+  1120→  1120→  reviewCount: "0",
+  1121→  1121→  imagesText: "",
+  1122→  1122→  description: "",
+  1123→  1123→  colorsText: "",
+  1124→  1124→  sizesText: "",
+  1125→  1125→  badge: "",
+  1126→  1126→  inStock: true,
+  1127→  1127→};
+  1128→  1128→
+  1129→  1129→function productsToForm(p: Product): ProductForm {
+  1130→  1130→  return {
+  1131→  1131→    name: p.name,
+  1132→  1132→    categoryId: p.categoryId,
+  1133→  1133→    price: String(p.price ?? ""),
+  1134→  1134→    oldPrice: p.oldPrice != null ? String(p.oldPrice) : "",
+  1135→  1135→    rating: String(p.rating ?? 4.5),
+  1136→  1136→    reviewCount: String(p.reviewCount ?? 0),
+  1137→  1137→    imagesText: (p.images || []).join("\n"),
+  1138→  1138→    description: p.description || "",
+  1139→  1139→    colorsText: (p.colors || []).join(", "),
+  1140→  1140→    sizesText: (p.sizes || []).join(", "),
+  1141→  1141→    badge: p.badge || "",
+  1142→  1142→    inStock: p.inStock,
+  1143→  1143→  };
+  1144→  1144→}
+  1145→  1145→
+  1146→  1146→function parseList(text: string): string[] {
+  1147→  1147→  return text
+  1148→  1148→    .split(/[\n,]/)
+  1149→  1149→    .map((s) => s.trim())
+  1150→  1150→    .filter(Boolean);
+  1151→  1151→}
+  1152→  1152→
+  1153→  1153→function ProductsSection() {
+  1154→  1154→  const [products, setProducts] = useState<Product[]>([]);
+  1155→  1155→  const [categories, setCategories] = useState<Category[]>([]);
+  1156→  1156→  const [loading, setLoading] = useState(true);
+  1157→  1157→  const [search, setSearch] = useState("");
+  1158→  1158→  const [modalOpen, setModalOpen] = useState(false);
+  1159→  1159→  const [editingId, setEditingId] = useState<string | null>(null);
+  1160→  1160→  const [form, setForm] = useState<ProductForm>(emptyProductForm);
+  1161→  1161→  const [saving, setSaving] = useState(false);
+  1162→  1162→
+  1163→  1163→  const refresh = useCallback(async () => {
+  1164→  1164→    setLoading(true);
+  1165→  1165→    try {
+  1166→  1166→      const [pRes, cRes] = await Promise.all([
+  1167→  1167→        fetch("/api/admin/products"),
+  1168→  1168→        fetch("/api/admin/categories"),
+  1169→  1169→      ]);
+  1170→  1170→      const p = await pRes.json();
+  1171→  1171→      const c = await cRes.json();
+  1172→  1172→      setProducts(Array.isArray(p) ? p : []);
+  1173→  1173→      setCategories(Array.isArray(c) ? c : []);
+  1174→  1174→    } catch {
+  1175→  1175→      toast.error("Failed to load products");
+  1176→  1176→    } finally {
+  1177→  1177→      setLoading(false);
+  1178→  1178→    }
+  1179→  1179→  }, []);
+  1180→  1180→
+  1181→  1181→  useEffect(() => {
+  1182→  1182→    refresh();
+  1183→  1183→  }, [refresh]);
+  1184→  1184→
+  1185→  1185→  const catName = useCallback(
+  1186→  1186→    (id: string) => categories.find((c) => c.id === id)?.name || id,
+  1187→  1187→    [categories]
+  1188→  1188→  );
+  1189→  1189→
+  1190→  1190→  const filtered = useMemo(() => {
+  1191→  1191→    if (!search.trim()) return products;
+  1192→  1192→    const q = search.toLowerCase();
+  1193→  1193→    return products.filter(
+  1194→  1194→      (p) =>
+  1195→  1195→        p.name.toLowerCase().includes(q) ||
+  1196→  1196→        catName(p.categoryId).toLowerCase().includes(q) ||
+  1197→  1197→        (p.badge || "").toLowerCase().includes(q)
+  1198→  1198→    );
+  1199→  1199→  }, [products, search, catName]);
+  1200→  1200→
+  1201→  1201→  const openAdd = () => {
+  1202→  1202→    setForm({
+  1203→  1203→      ...emptyProductForm,
+  1204→  1204→      categoryId: categories[0]?.id || "",
+  1205→  1205→    });
+  1206→  1206→    setEditingId(null);
+  1207→  1207→    setModalOpen(true);
+  1208→  1208→  };
+  1209→  1209→
+  1210→  1210→  const openEdit = (p: Product) => {
+  1211→  1211→    setForm(productsToForm(p));
+  1212→  1212→    setEditingId(p.id);
+  1213→  1213→    setModalOpen(true);
+  1214→  1214→  };
+  1215→  1215→
+  1216→  1216→  const handleSave = async () => {
+  1217→  1217→    if (!form.name.trim()) {
+  1218→  1218→      toast.error("Product name is required");
+  1219→  1219→      return;
+  1220→  1220→    }
+  1221→  1221→    if (!form.categoryId) {
+  1222→  1222→      toast.error("Please select a category");
+  1223→  1223→      return;
+  1224→  1224→    }
+  1225→  1225→    if (!form.price || isNaN(Number(form.price))) {
+  1226→  1226→      toast.error("Valid price is required");
+  1227→  1227→      return;
+  1228→  1228→    }
+  1229→  1229→
+  1230→  1230→    const images = parseList(form.imagesText);
+  1231→  1231→    if (images.length === 0) {
+  1232→  1232→      toast.error("At least one image URL is required");
+  1233→  1233→      return;
+  1234→  1234→    }
+  1235→  1235→
+  1236→  1236→    setSaving(true);
+  1237→  1237→    try {
+  1238→  1238→      const payload = {
+  1239→  1239→        name: form.name.trim(),
+  1240→  1240→        categoryId: form.categoryId,
+  1241→  1241→        price: Number(form.price),
+  1242→  1242→        oldPrice: form.oldPrice ? Number(form.oldPrice) : null,
+  1243→  1243→        rating: Number(form.rating) || 4.5,
+  1244→  1244→        reviewCount: Number(form.reviewCount) || 0,
+  1245→  1245→        images,
+  1246→  1246→        description: form.description,
+  1247→  1247→        colors: parseList(form.colorsText),
+  1248→  1248→        sizes: parseList(form.sizesText),
+  1249→  1249→        badge: form.badge.trim() || null,
+  1250→  1250→        inStock: form.inStock,
+  1251→  1251→      };
+  1252→  1252→      const isEdit = editingId !== null;
+  1253→  1253→      const url = "/api/admin/products";
+  1254→  1254→      const method = isEdit ? "PUT" : "POST";
+  1255→  1255→      const body = isEdit ? { id: editingId, ...payload } : payload;
+  1256→  1256→      const res = await fetch(url, {
+  1257→  1257→        method,
+  1258→  1258→        headers: { "Content-Type": "application/json" },
+  1259→  1259→        body: JSON.stringify(body),
+  1260→  1260→      });
+  1261→  1261→      if (!res.ok) {
+  1262→  1262→        const err = await res.json().catch(() => ({}));
+  1263→  1263→        throw new Error(err.error || "Save failed");
+  1264→  1264→      }
+  1265→  1265→      toast.success(isEdit ? "Product updated" : "Product created");
+  1266→  1266→      setModalOpen(false);
+  1267→  1267→      await refresh();
+  1268→  1268→    } catch (e) {
+  1269→  1269→      toast.error(e instanceof Error ? e.message : "Failed to save");
+  1270→  1270→    } finally {
+  1271→  1271→      setSaving(false);
+  1272→  1272→    }
+  1273→  1273→  };
+  1274→  1274→
+  1275→  1275→  const handleDelete = async (p: Product) => {
+  1276→  1276→    if (!window.confirm(`Delete product "${p.name}"?`)) return;
+  1277→  1277→    try {
+  1278→  1278→      const res = await fetch(
+  1279→  1279→        `/api/admin/products?id=${encodeURIComponent(p.id)}`,
+  1280→  1280→        { method: "DELETE" }
+  1281→  1281→      );
+  1282→  1282→      if (!res.ok) throw new Error("Delete failed");
+  1283→  1283→      toast.success("Product deleted");
+  1284→  1284→      await refresh();
+  1285→  1285→    } catch {
+  1286→  1286→      toast.error("Failed to delete product");
+  1287→  1287→    }
+  1288→  1288→  };
+  1289→  1289→
+  1290→  1290→  return (
+  1291→  1291→    <div>
+  1292→  1292→      <SectionHeader
+  1293→  1293→        title="Products"
+  1294→  1294→        subtitle={`${products.length} item${products.length === 1 ? "" : "s"} in your catalog`}
+  1295→  1295→        action={
+  1296→  1296→          <button
+  1297→  1297→            onClick={openAdd}
+  1298→  1298→            disabled={categories.length === 0}
+  1299→  1299→            className={primaryBtnClass}
+  1300→  1300→            title={
+  1301→  1301→              categories.length === 0
+  1302→  1302→                ? "Add a category first"
+  1303→  1303→                : "Add product"
+  1304→  1304→            }
+  1305→  1305→          >
+  1306→  1306→            <Plus size={15} /> Add Product
+  1307→  1307→          </button>
+  1308→  1308→        }
+  1309→  1309→      />
+  1310→  1310→
+  1311→  1311→      {categories.length === 0 && !loading && (
+  1312→  1312→        <div className="mb-4 flex items-start gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-200 text-sm">
+  1313→  1313→          <AlertCircle size={16} className="mt-0.5 shrink-0" />
+  1314→  1314→          <div>
+  1315→  1315→            You need at least one category before adding products. Head to the
+  1316→  1316→            Categories tab first.
+  1317→  1317→          </div>
+  1318→  1318→        </div>
+  1319→  1319→      )}
+  1320→  1320→
+  1321→  1321→      <div className={`${cardClass} p-3 mb-4`}>
+  1322→  1322→        <div className="relative">
+  1323→  1323→          <Search
+  1324→  1324→            className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-500"
+  1325→  1325→            size={16}
+  1326→  1326→          />
+  1327→  1327→          <input
+  1328→  1328→            className={`${inputClass} pl-10`}
+  1329→  1329→            placeholder="Search by name, category, or badge..."
+  1330→  1330→            value={search}
+  1331→  1331→            onChange={(e) => setSearch(e.target.value)}
+  1332→  1332→          />
+  1333→  1333→        </div>
+  1334→  1334→      </div>
+  1335→  1335→
+  1336→  1336→      {loading ? (
+  1337→  1337→        <div className={`${cardClass} p-10 flex items-center justify-center`}>
+  1338→  1338→          <Spinner className="text-emerald-400" />
+  1339→  1339→        </div>
+  1340→  1340→      ) : filtered.length === 0 ? (
+  1341→  1341→        <div className={`${cardClass}`}>
+  1342→  1342→          <EmptyState
+  1343→  1343→            icon={Package}
+  1344→  1344→            title={search ? "No matches" : "No products yet"}
+  1345→  1345→            subtitle={
+  1346→  1346→              search
+  1347→  1347→                ? "Try a different search term"
+  1348→  1348→                : "Click 'Add Product' to create your first item"
+  1349→  1349→            }
+  1350→  1350→          />
+  1351→  1351→        </div>
+  1352→  1352→      ) : (
+  1353→  1353→        <div className={`${cardClass} overflow-hidden`}>
+  1354→  1354→          <div className="divide-y divide-white/5">
+  1355→  1355→            {filtered.map((p) => (
+  1356→  1356→              <div
+  1357→  1357→                key={p.id}
+  1358→  1358→                className="flex items-center gap-3 sm:gap-4 p-3 sm:p-4 hover:bg-white/[0.02] transition"
+  1359→  1359→              >
+  1360→  1360→                <ImageThumb
+  1361→  1361→                  src={p.images?.[0] || ""}
+  1362→  1362→                  alt={p.name}
+  1363→  1363→                  className="w-14 h-14 rounded-xl shrink-0 border border-white/10"
+  1364→  1364→                />
+  1365→  1365→                <div className="flex-1 min-w-0">
+  1366→  1366→                  <div className="flex items-center gap-2 flex-wrap">
+  1367→  1367→                    <span className="text-sm font-semibold text-white truncate">
+  1368→  1368→                      {p.name}
+  1369→  1369→                    </span>
+  1370→  1370→                    {p.badge && (
+  1371→  1371→                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-emerald-500/15 text-emerald-300 border border-emerald-500/20">
+  1372→  1372→                        {p.badge}
+  1373→  1373→                      </span>
+  1374→  1374→                    )}
+  1375→  1375→                  </div>
+  1376→  1376→                  <div className="text-xs text-slate-400 mt-0.5">
+  1377→  1377→                    {catName(p.categoryId)} · ${p.price.toFixed(2)}
+  1378→  1378→                    {p.oldPrice != null && (
+  1379→  1379→                      <span className="ml-1 line-through text-slate-600">
+  1380→  1380→                        ${p.oldPrice.toFixed(2)}
+  1381→  1381→                      </span>
+  1382→  1382→                    )}
+  1383→  1383→                  </div>
+  1384→  1384→                  <div className="flex items-center gap-2 mt-1">
+  1385→  1385→                    <span
+  1386→  1386→                      className={`inline-flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded ${
+  1387→  1387→                        p.inStock
+  1388→  1388→                          ? "bg-emerald-500/10 text-emerald-300"
+  1389→  1389→                          : "bg-rose-500/10 text-rose-300"
+  1390→  1390→                      }`}
+  1391→  1391→                    >
+  1392→  1392→                      {p.inStock ? "In stock" : "Out of stock"}
+  1393→  1393→                    </span>
+  1394→  1394→                    <span className="text-[10px] text-slate-500">
+  1395→  1395→                      ★ {p.rating} · {p.reviewCount} reviews
+  1396→  1396→                    </span>
+  1397→  1397→                  </div>
+  1398→  1398→                </div>
+  1399→  1399→                <div className="flex gap-1.5 shrink-0">
+  1400→  1400→                  <button
+  1401→  1401→                    onClick={() => openEdit(p)}
+  1402→  1402→                    className={`${ghostBtnClass} !py-2 !px-3`}
+  1403→  1403→                    aria-label="Edit product"
+  1404→  1404→                  >
+  1405→  1405→                    <Pencil size={13} />
+  1406→  1406→                  </button>
+  1407→  1407→                  <button
+  1408→  1408→                    onClick={() => handleDelete(p)}
+  1409→  1409→                    className={`${dangerBtnClass} !py-2 !px-3`}
+  1410→  1410→                    aria-label="Delete product"
+  1411→  1411→                  >
+  1412→  1412→                    <Trash2 size={13} />
+  1413→  1413→                  </button>
+  1414→  1414→                </div>
+  1415→  1415→              </div>
+  1416→  1416→            ))}
+  1417→  1417→          </div>
+  1418→  1418→        </div>
+  1419→  1419→      )}
+  1420→  1420→
+  1421→  1421→      <Modal
+  1422→  1422→        open={modalOpen}
+  1423→  1423→        onClose={() => setModalOpen(false)}
+  1424→  1424→        title={editingId ? "Edit Product" : "Add Product"}
+  1425→  1425→        maxWidth="max-w-2xl"
+  1426→  1426→      >
+  1427→  1427→        <div className="space-y-4">
+  1428→  1428→          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  1429→  1429→            <Field label="Name">
+  1430→  1430→              <input
+  1431→  1431→                className={inputClass}
+  1432→  1432→                value={form.name}
+  1433→  1433→                onChange={(e) => setForm({ ...form, name: e.target.value })}
+  1434→  1434→                placeholder="Wireless Headphones"
+  1435→  1435→              />
+  1436→  1436→            </Field>
+  1437→  1437→            <Field label="Category">
+  1438→  1438→              <select
+  1439→  1439→                className={inputClass}
+  1440→  1440→                value={form.categoryId}
+  1441→  1441→                onChange={(e) =>
+  1442→  1442→                  setForm({ ...form, categoryId: e.target.value })
+  1443→  1443→                }
+  1444→  1444→              >
+  1445→  1445→                <option value="" className="bg-slate-900">
+  1446→  1446→                  Select category...
+  1447→  1447→                </option>
+  1448→  1448→                {categories.map((c) => (
+  1449→  1449→                  <option key={c.id} value={c.id} className="bg-slate-900">
+  1450→  1450→                    {c.name}
+  1451→  1451→                  </option>
+  1452→  1452→                ))}
+  1453→  1453→              </select>
+  1454→  1454→            </Field>
+  1455→  1455→          </div>
+  1456→  1456→
+  1457→  1457→          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+  1458→  1458→            <Field label="Price">
+  1459→  1459→              <input
+  1460→  1460→                type="number"
+  1461→  1461→                step="0.01"
+  1462→  1462→                className={inputClass}
+  1463→  1463→                value={form.price}
+  1464→  1464→                onChange={(e) => setForm({ ...form, price: e.target.value })}
+  1465→  1465→                placeholder="99.99"
+  1466→  1466→              />
+  1467→  1467→            </Field>
+  1468→  1468→            <Field label="Old Price">
+  1469→  1469→              <input
+  1470→  1470→                type="number"
+  1471→  1471→                step="0.01"
+  1472→  1472→                className={inputClass}
+  1473→  1473→                value={form.oldPrice}
+  1474→  1474→                onChange={(e) =>
+  1475→  1475→                  setForm({ ...form, oldPrice: e.target.value })
+  1476→  1476→                }
+  1477→  1477→                placeholder="129.99"
+  1478→  1478→              />
+  1479→  1479→            </Field>
+  1480→  1480→            <Field label="Rating">
+  1481→  1481→              <input
+  1482→  1482→                type="number"
+  1483→  1483→                step="0.1"
+  1484→  1484→                min="0"
+  1485→  1485→                max="5"
+  1486→  1486→                className={inputClass}
+  1487→  1487→                value={form.rating}
+  1488→  1488→                onChange={(e) => setForm({ ...form, rating: e.target.value })}
+  1489→  1489→                placeholder="4.5"
+  1490→  1490→              />
+  1491→  1491→            </Field>
+  1492→  1492→            <Field label="Reviews">
+  1493→  1493→              <input
+  1494→  1494→                type="number"
+  1495→  1495→                min="0"
+  1496→  1496→                className={inputClass}
+  1497→  1497→                value={form.reviewCount}
+  1498→  1498→                onChange={(e) =>
+  1499→  1499→                  setForm({ ...form, reviewCount: e.target.value })
+  1500→  1500→                }
+  1501→  1501→                placeholder="0"
+  1502→  1502→              />
+  1503→  1503→            </Field>
+  1504→  1504→          </div>
+  1505→  1505→
+  1506→  1506→          <Field
+  1507→  1507→            label="Image URLs"
+  1508→  1508→            hint="One URL per line, or comma-separated. First image is the thumbnail."
+  1509→  1509→          >
+  1510→  1510→            <textarea
+  1511→  1511→              className={`${inputClass} min-h-[80px] font-mono text-xs resize-y`}
+  1512→  1512→              value={form.imagesText}
+  1513→  1513→              onChange={(e) =>
+  1514→  1514→                setForm({ ...form, imagesText: e.target.value })
+  1515→  1515→              }
+  1516→  1516→              placeholder={"https://...\nhttps://..."}
+  1517→  1517→            />
+  1518→  1518→          </Field>
+  1519→  1519→
+  1520→  1520→          {parseList(form.imagesText).length > 0 && (
+  1521→  1521→            <div className="flex gap-2 flex-wrap">
+  1522→  1522→              {parseList(form.imagesText).slice(0, 6).map((u, i) => (
+  1523→  1523→                <ImageThumb
+  1524→  1524→                  key={i}
+  1525→  1525→                  src={u}
+  1526→  1526→                  alt={`Preview ${i + 1}`}
+  1527→  1527→                  className="w-12 h-12 rounded-lg border border-white/10"
+  1528→  1528→                />
+  1529→  1529→              ))}
+  1530→  1530→            </div>
+  1531→  1531→          )}
+  1532→  1532→
+  1533→  1533→          <Field label="Description">
+  1534→  1534→            <textarea
+  1535→  1535→              className={`${inputClass} min-h-[80px] resize-y`}
+  1536→  1536→              value={form.description}
+  1537→  1537→              onChange={(e) =>
+  1538→  1538→                setForm({ ...form, description: e.target.value })
+  1539→  1539→              }
+  1540→  1540→              placeholder="Product description..."
+  1541→  1541→            />
+  1542→  1542→          </Field>
+  1543→  1543→
+  1544→  1544→          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+  1545→  1545→            <Field
+  1546→  1546→              label="Colors"
+  1547→  1547→              hint="Comma-separated hex values, e.g. #10b981, #f59e0b"
+  1548→  1548→            >
+  1549→  1549→              <input
+  1550→  1550→                className={inputClass}
+  1551→  1551→                value={form.colorsText}
+  1552→  1552→                onChange={(e) =>
+  1553→  1553→                  setForm({ ...form, colorsText: e.target.value })
+  1554→  1554→                }
+  1555→  1555→                placeholder="#10b981, #f59e0b"
+  1556→  1556→              />
+  1557→  1557→            </Field>
+  1558→  1558→            <Field
+  1559→  1559→              label="Sizes"
+  1560→  1560→              hint="Comma-separated, e.g. S, M, L, XL"
+  1561→  1561→            >
+  1562→  1562→              <input
+  1563→  1563→                className={inputClass}
+  1564→  1564→                value={form.sizesText}
+  1565→  1565→                onChange={(e) =>
+  1566→  1566→                  setForm({ ...form, sizesText: e.target.value })
+  1567→  1567→                }
+  1568→  1568→                placeholder="S, M, L, XL"
+  1569→  1569→              />
+  1570→  1570→            </Field>
+  1571→  1571→          </div>
+  1572→  1572→
+  1573→  1573→          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
+  1574→  1574→            <Field label="Badge" hint="Short label like 'New', 'Sale', 'Hot'">
+  1575→  1575→              <input
+  1576→  1576→                className={inputClass}
+  1577→  1577→                value={form.badge}
+  1578→  1578→                onChange={(e) => setForm({ ...form, badge: e.target.value })}
+  1579→  1579→                placeholder="New"
+  1580→  1580→              />
+  1581→  1581→            </Field>
+  1582→  1582→            <div className="flex items-center justify-between p-3.5 rounded-xl bg-white/5 border border-white/10">
+  1583→  1583→              <div>
+  1584→  1584→                <div className="text-sm font-semibold text-white">
+  1585→  1585→                  In Stock
+  1586→  1586→                </div>
+  1587→  1587→                <div className="text-xs text-slate-400">
+  1588→  1588→                  Available for purchase
+  1589→  1589→                </div>
+  1590→  1590→              </div>
+  1591→  1591→              <Toggle
+  1592→  1592→                checked={form.inStock}
+  1593→  1593→                onChange={(v) => setForm({ ...form, inStock: v })}
+  1594→  1594→                label="In stock"
+  1595→  1595→              />
+  1596→  1596→            </div>
+  1597→  1597→          </div>
+  1598→  1598→
+  1599→  1599→          <div className="flex gap-2 pt-2">
+  1600→  1600→            <button
+  1601→  1601→              onClick={() => setModalOpen(false)}
+  1602→  1602→              className={`${ghostBtnClass} flex-1`}
+  1603→  1603→            >
+  1604→  1604→              Cancel
+  1605→  1605→            </button>
+  1606→  1606→            <button
+  1607→  1607→              onClick={handleSave}
+  1608→  1608→              disabled={saving}
+  1609→  1609→              className={`${primaryBtnClass} flex-1`}
+  1610→  1610→            >
+  1611→  1611→              {saving ? (
+  1612→  1612→                <>
+  1613→  1613→                  <Spinner /> Saving...
+  1614→  1614→                </>
+  1615→  1615→              ) : (
+  1616→  1616→                <>
+  1617→  1617→                  <Save size={15} /> {editingId ? "Update" : "Create"}
+  1618→  1618→                </>
+  1619→  1619→              )}
+  1620→  1620→            </button>
+  1621→  1621→          </div>
+  1622→  1622→        </div>
+  1623→  1623→      </Modal>
+  1624→  1624→    </div>
+  1625→  1625→  );
+  1626→  1626→}
+  1627→  1627→
+  1628→  1628→// =====================================================================
+  1629→  1629→// Section: Categories
+  1630→  1630→// =====================================================================
+  1631→  1631→
+  1632→  1632→interface CategoryForm {
+  1633→  1633→  name: string;
+  1634→  1634→  icon: string;
+  1635→  1635→  color: string;
+  1636→  1636→}
+  1637→  1637→
+  1638→  1638→const emptyCategoryForm: CategoryForm = {
+  1639→  1639→  name: "",
+  1640→  1640→  icon: "tag",
+  1641→  1641→  color: "#10b981",
+  1642→  1642→};
+  1643→  1643→
+  1644→  1644→function CategoriesSection() {
+  1645→  1645→  const [categories, setCategories] = useState<Category[]>([]);
+  1646→  1646→  const [loading, setLoading] = useState(true);
+  1647→  1647→  const [modalOpen, setModalOpen] = useState(false);
+  1648→  1648→  const [editingId, setEditingId] = useState<string | null>(null);
+  1649→  1649→  const [form, setForm] = useState<CategoryForm>(emptyCategoryForm);
+  1650→  1650→  const [saving, setSaving] = useState(false);
+  1651→  1651→
+  1652→  1652→  const refresh = useCallback(async () => {
+  1653→  1653→    setLoading(true);
+  1654→  1654→    try {
+  1655→  1655→      const res = await fetch("/api/admin/categories");
+  1656→  1656→      const data = await res.json();
+  1657→  1657→      setCategories(Array.isArray(data) ? data : []);
+  1658→  1658→    } catch {
+  1659→  1659→      toast.error("Failed to load categories");
+  1660→  1660→    } finally {
+  1661→  1661→      setLoading(false);
+  1662→  1662→    }
+  1663→  1663→  }, []);
+  1664→  1664→
+  1665→  1665→  useEffect(() => {
+  1666→  1666→    refresh();
+  1667→  1667→  }, [refresh]);
+  1668→  1668→
+  1669→  1669→  const openAdd = () => {
+  1670→  1670→    setForm(emptyCategoryForm);
+  1671→  1671→    setEditingId(null);
+  1672→  1672→    setModalOpen(true);
+  1673→  1673→  };
+  1674→  1674→
+  1675→  1675→  const openEdit = (c: Category) => {
+  1676→  1676→    setForm({ name: c.name, icon: c.icon, color: c.color });
+  1677→  1677→    setEditingId(c.id);
+  1678→  1678→    setModalOpen(true);
+  1679→  1679→  };
+  1680→  1680→
+  1681→  1681→  const handleSave = async () => {
+  1682→  1682→    if (!form.name.trim()) {
+  1683→  1683→      toast.error("Category name is required");
+  1684→  1684→      return;
+  1685→  1685→    }
+  1686→  1686→    setSaving(true);
+  1687→  1687→    try {
+  1688→  1688→      const payload = {
+  1689→  1689→        name: form.name.trim(),
+  1690→  1690→        icon: form.icon.trim() || "tag",
+  1691→  1691→        color: form.color,
+  1692→  1692→      };
+  1693→  1693→      const isEdit = editingId !== null;
+  1694→  1694→      const url = "/api/admin/categories";
+  1695→  1695→      const method = isEdit ? "PUT" : "POST";
+  1696→  1696→      const body = isEdit ? { id: editingId, ...payload } : payload;
+  1697→  1697→      const res = await fetch(url, {
+  1698→  1698→        method,
+  1699→  1699→        headers: { "Content-Type": "application/json" },
+  1700→  1700→        body: JSON.stringify(body),
+  1701→  1701→      });
+  1702→  1702→      if (!res.ok) {
+  1703→  1703→        const err = await res.json().catch(() => ({}));
+  1704→  1704→        throw new Error(err.error || "Save failed");
+  1705→  1705→      }
+  1706→  1706→      toast.success(isEdit ? "Category updated" : "Category created");
+  1707→  1707→      setModalOpen(false);
+  1708→  1708→      await refresh();
+  1709→  1709→    } catch (e) {
+  1710→  1710→      toast.error(e instanceof Error ? e.message : "Failed to save");
+  1711→  1711→    } finally {
+  1712→  1712→      setSaving(false);
+  1713→  1713→    }
+  1714→  1714→  };
+  1715→  1715→
+  1716→  1716→  const handleDelete = async (c: Category) => {
+  1717→  1717→    if (
+  1718→  1718→      !window.confirm(
+  1719→  1719→        `Delete category "${c.name}"? Products in this category may be affected.`
+  1720→  1720→      )
+  1721→  1721→    )
+  1722→  1722→      return;
+  1723→  1723→    try {
+  1724→  1724→      const res = await fetch(
+  1725→  1725→        `/api/admin/categories?id=${encodeURIComponent(c.id)}`,
+  1726→  1726→        { method: "DELETE" }
+  1727→  1727→      );
+  1728→  1728→      if (!res.ok) {
+  1729→  1729→        const err = await res.json().catch(() => ({}));
+  1730→  1730→        throw new Error(err.error || "Delete failed");
+  1731→  1731→      }
+  1732→  1732→      toast.success("Category deleted");
+  1733→  1733→      await refresh();
+  1734→  1734→    } catch (e) {
+  1735→  1735→      toast.error(e instanceof Error ? e.message : "Failed to delete");
+  1736→  1736→    }
+  1737→  1737→  };
+  1738→  1738→
+  1739→  1739→  return (
+  1740→  1740→    <div>
+  1741→  1741→      <SectionHeader
+  1742→  1742→        title="Categories"
+  1743→  1743→        subtitle={`${categories.length} categor${categories.length === 1 ? "y" : "ies"} in your catalog`}
+  1744→  1744→        action={
+  1745→  1745→          <button onClick={openAdd} className={primaryBtnClass}>
+  1746→  1746→            <Plus size={15} /> Add Category
+  1747→  1747→          </button>
+  1748→  1748→        }
+  1749→  1749→      />
+  1750→  1750→
+  1751→  1751→      {loading ? (
+  1752→  1752→        <div className={`${cardClass} p-10 flex items-center justify-center`}>
+  1753→  1753→          <Spinner className="text-emerald-400" />
+  1754→  1754→        </div>
+  1755→  1755→      ) : categories.length === 0 ? (
+  1756→  1756→        <div className={`${cardClass}`}>
+  1757→  1757→          <EmptyState
+  1758→  1758→            icon={Tags}
+  1759→  1759→            title="No categories yet"
+  1760→  1760→            subtitle="Click 'Add Category' to create your first one"
+  1761→  1761→          />
+  1762→  1762→        </div>
+  1763→  1763→      ) : (
+  1764→  1764→        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+  1765→  1765→          {categories.map((c) => (
+  1766→  1766→            <div key={c.id} className={`${cardClass} p-5 text-center`}>
+  1767→  1767→              <div
+  1768→  1768→                className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-3 border border-white/10"
+  1769→  1769→                style={{ background: `${c.color}22` }}
+  1770→  1770→              >
+  1771→  1771→                <span
+  1772→  1772→                  className="font-bold text-lg uppercase"
+  1773→  1773→                  style={{ color: c.color }}
+  1774→  1774→                >
+  1775→  1775→                  {c.name.charAt(0)}
+  1776→  1776→                </span>
+  1777→  1777→              </div>
+  1778→  1778→              <div className="text-sm font-semibold text-white truncate">
+  1779→  1779→                {c.name}
+  1780→  1780→              </div>
+  1781→  1781→              <div className="text-[10px] text-slate-500 font-mono mt-0.5 truncate">
+  1782→  1782→                icon: {c.icon}
+  1783→  1783→              </div>
+  1784→  1784→              <div className="flex items-center justify-center gap-1.5 mt-2">
+  1785→  1785→                <span
+  1786→  1786→                  className="inline-block w-3 h-3 rounded-full border border-white/20"
+  1787→  1787→                  style={{ background: c.color }}
+  1788→  1788→                />
+  1789→  1789→                <span className="text-[10px] text-slate-500 font-mono">
+  1790→  1790→                  {c.color}
+  1791→  1791→                </span>
+  1792→  1792→              </div>
+  1793→  1793→              <div className="flex gap-1.5 mt-4">
+  1794→  1794→                <button
+  1795→  1795→                  onClick={() => openEdit(c)}
+  1796→  1796→                  className={`${ghostBtnClass} flex-1 !py-2 !px-2`}
+  1797→  1797→                >
+  1798→  1798→                  <Pencil size={13} /> Edit
+  1799→  1799→                </button>
+  1800→  1800→                <button
+  1801→  1801→                  onClick={() => handleDelete(c)}
+  1802→  1802→                  className={`${dangerBtnClass} !py-2 !px-2.5`}
+  1803→  1803→                  aria-label="Delete category"
+  1804→  1804→                >
+  1805→  1805→                  <Trash2 size={13} />
+  1806→  1806→                </button>
+  1807→  1807→              </div>
+  1808→  1808→            </div>
+  1809→  1809→          ))}
+  1810→  1810→        </div>
+  1811→  1811→      )}
+  1812→  1812→
+  1813→  1813→      <Modal
+  1814→  1814→        open={modalOpen}
+  1815→  1815→        onClose={() => setModalOpen(false)}
+  1816→  1816→        title={editingId ? "Edit Category" : "Add Category"}
+  1817→  1817→      >
+  1818→  1818→        <div className="space-y-4">
+  1819→  1819→          <Field label="Name">
+  1820→  1820→            <input
+  1821→  1821→              className={inputClass}
+  1822→  1822→              value={form.name}
+  1823→  1823→              onChange={(e) => setForm({ ...form, name: e.target.value })}
+  1824→  1824→              placeholder="Electronics"
+  1825→  1825→            />
+  1826→  1826→          </Field>
+  1827→  1827→          <Field
+  1828→  1828→            label="Icon Name"
+  1829→  1829→            hint="MaterialCommunityIcons name, e.g. laptop, tshirt, home"
+  1830→  1830→          >
+  1831→  1831→            <input
+  1832→  1832→              className={`${inputClass} font-mono`}
+  1833→  1833→              value={form.icon}
+  1834→  1834→              onChange={(e) => setForm({ ...form, icon: e.target.value })}
+  1835→  1835→              placeholder="laptop"
+  1836→  1836→            />
+  1837→  1837→          </Field>
+  1838→  1838→          <ColorField
+  1839→  1839→            label="Color"
+  1840→  1840→            value={form.color}
+  1841→  1841→            onChange={(v) => setForm({ ...form, color: v })}
+  1842→  1842→          />
+  1843→  1843→          <div className="flex gap-2 pt-2">
+  1844→  1844→            <button
+  1845→  1845→              onClick={() => setModalOpen(false)}
+  1846→  1846→              className={`${ghostBtnClass} flex-1`}
+  1847→  1847→            >
+  1848→  1848→              Cancel
+  1849→  1849→            </button>
+  1850→  1850→            <button
+  1851→  1851→              onClick={handleSave}
+  1852→  1852→              disabled={saving}
+  1853→  1853→              className={`${primaryBtnClass} flex-1`}
+  1854→  1854→            >
+  1855→  1855→              {saving ? (
+  1856→  1856→                <>
+  1857→  1857→                  <Spinner /> Saving...
+  1858→  1858→                </>
+  1859→  1859→              ) : (
+  1860→  1860→                <>
+  1861→  1861→                  <Save size={15} /> {editingId ? "Update" : "Create"}
+  1862→  1862→                </>
+  1863→  1863→              )}
+  1864→  1864→            </button>
+  1865→  1865→          </div>
+  1866→  1866→        </div>
+  1867→  1867→      </Modal>
+  1868→  1868→    </div>
+  1869→  1869→  );
+  1870→  1870→}
+  1871→  1871→
+  1872→  1872→// =====================================================================
+  1873→  1873→// Section: Coupons
+  1874→  1874→// =====================================================================
+  1875→  1875→
+  1876→  1876→interface CouponForm {
+  1877→  1877→  code: string;
+  1878→  1878→  description: string;
+  1879→  1879→  type: CouponType;
+  1880→  1880→  value: string;
+  1881→  1881→  minSubtotal: string;
+  1882→  1882→}
+  1883→  1883→
+  1884→  1884→const emptyCouponForm: CouponForm = {
+  1885→  1885→  code: "",
+  1886→  1886→  description: "",
+  1887→  1887→  type: "percent",
+  1888→  1888→  value: "",
+  1889→  1889→  minSubtotal: "0",
+  1890→  1890→};
+  1891→  1891→
+  1892→  1892→function CouponsSection() {
+  1893→  1893→  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  1894→  1894→  const [loading, setLoading] = useState(true);
+  1895→  1895→  const [modalOpen, setModalOpen] = useState(false);
+  1896→  1896→  const [editingCode, setEditingCode] = useState<string | null>(null);
+  1897→  1897→  const [form, setForm] = useState<CouponForm>(emptyCouponForm);
+  1898→  1898→  const [saving, setSaving] = useState(false);
+  1899→  1899→
+  1900→  1900→  const refresh = useCallback(async () => {
+  1901→  1901→    setLoading(true);
+  1902→  1902→    try {
+  1903→  1903→      const res = await fetch("/api/admin/coupons");
+  1904→  1904→      const data = await res.json();
+  1905→  1905→      setCoupons(Array.isArray(data) ? data : []);
+  1906→  1906→    } catch {
+  1907→  1907→      toast.error("Failed to load coupons");
+  1908→  1908→    } finally {
+  1909→  1909→      setLoading(false);
+  1910→  1910→    }
+  1911→  1911→  }, []);
+  1912→  1912→
+  1913→  1913→  useEffect(() => {
+  1914→  1914→    refresh();
+  1915→  1915→  }, [refresh]);
+  1916→  1916→
+  1917→  1917→  const openAdd = () => {
+  1918→  1918→    setForm(emptyCouponForm);
+  1919→  1919→    setEditingCode(null);
+  1920→  1920→    setModalOpen(true);
+  1921→  1921→  };
+  1922→  1922→
+  1923→  1923→  const openEdit = (c: Coupon) => {
+  1924→  1924→    setForm({
+  1925→  1925→      code: c.code,
+  1926→  1926→      description: c.description,
+  1927→  1927→      type: (c.type as CouponType) || "percent",
+  1928→  1928→      value: String(c.value ?? ""),
+  1929→  1929→      minSubtotal: String(c.minSubtotal ?? 0),
+  1930→  1930→    });
+  1931→  1931→    setEditingCode(c.code);
+  1932→  1932→    setModalOpen(true);
+  1933→  1933→  };
+  1934→  1934→
+  1935→  1935→  const handleSave = async () => {
+  1936→  1936→    if (!form.code.trim()) {
+  1937→  1937→      toast.error("Coupon code is required");
+  1938→  1938→      return;
+  1939→  1939→    }
+  1940→  1940→    if (form.value === "" || isNaN(Number(form.value))) {
+  1941→  1941→      toast.error("Valid value is required");
+  1942→  1942→      return;
+  1943→  1943→    }
+  1944→  1944→    setSaving(true);
+  1945→  1945→    try {
+  1946→  1946→      const isEdit = editingCode !== null;
+  1947→  1947→      // When editing, use the original code as the identifier (code field is
+  1948→  1948→      // disabled). When creating, use the uppercased value from the form.
+  1949→  1949→      const code = isEdit ? editingCode : form.code.trim().toUpperCase();
+  1950→  1950→      const body = {
+  1951→  1951→        code,
+  1952→  1952→        description: form.description.trim(),
+  1953→  1953→        type: form.type,
+  1954→  1954→        value: Number(form.value),
+  1955→  1955→        minSubtotal: Number(form.minSubtotal) || 0,
+  1956→  1956→      };
+  1957→  1957→      const url = "/api/admin/coupons";
+  1958→  1958→      const method = isEdit ? "PUT" : "POST";
+  1959→  1959→      const res = await fetch(url, {
+  1960→  1960→        method,
+  1961→  1961→        headers: { "Content-Type": "application/json" },
+  1962→  1962→        body: JSON.stringify(body),
+  1963→  1963→      });
+  1964→  1964→      if (!res.ok) {
+  1965→  1965→        const err = await res.json().catch(() => ({}));
+  1966→  1966→        throw new Error(err.error || "Save failed");
+  1967→  1967→      }
+  1968→  1968→      toast.success(isEdit ? "Coupon updated" : "Coupon created");
+  1969→  1969→      setModalOpen(false);
+  1970→  1970→      await refresh();
+  1971→  1971→    } catch (e) {
+  1972→  1972→      toast.error(e instanceof Error ? e.message : "Failed to save");
+  1973→  1973→    } finally {
+  1974→  1974→      setSaving(false);
+  1975→  1975→    }
+  1976→  1976→  };
+  1977→  1977→
+  1978→  1978→  const handleDelete = async (c: Coupon) => {
+  1979→  1979→    if (!window.confirm(`Delete coupon "${c.code}"?`)) return;
+  1980→  1980→    try {
+  1981→  1981→      const res = await fetch(
+  1982→  1982→        `/api/admin/coupons?code=${encodeURIComponent(c.code)}`,
+  1983→  1983→        { method: "DELETE" }
+  1984→  1984→      );
+  1985→  1985→      if (!res.ok) throw new Error("Delete failed");
+  1986→  1986→      toast.success("Coupon deleted");
+  1987→  1987→      await refresh();
+  1988→  1988→    } catch {
+  1989→  1989→      toast.error("Failed to delete coupon");
+  1990→  1990→    }
+  1991→  1991→  };
+  1992→  1992→
+  1993→  1993→  const typeLabel = (t: string) => {
+  1994→  1994→    if (t === "percent") return "% off";
+  1995→  1995→    if (t === "flat") return "flat off";
+  1996→  1996→    return "free shipping";
+  1997→  1997→  };
+  1998→  1998→
+  1999→  1999→  const formatValue = (c: Coupon) => {
+  2000→  2000→    if (c.type === "percent") return `${c.value}%`;
+
+[showing lines 1-2000 of 2002; use offset=2001 with limit to continue reading]

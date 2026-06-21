@@ -27,11 +27,17 @@ export async function PUT(req: NextRequest) {
     const body = await req.json();
     const allowed = [
       "appName", "tagline", "logoUrl", "primaryColor", "primaryDarkColor",
-      "accentColor", "darkModeDefault", "currency",
+      "accentColor", "darkModeDefault", "currency", "texts",
     ];
     const data: Record<string, unknown> = {};
     for (const k of allowed) {
-      if (k in body) data[k] = body[k];
+      if (k in body) {
+        if (k === "texts" && typeof body[k] === "object") {
+          data[k] = JSON.stringify(body[k]);
+        } else {
+          data[k] = body[k];
+        }
+      }
     }
     const updated = await db.appConfig.upsert({
       where: { id: "singleton" },

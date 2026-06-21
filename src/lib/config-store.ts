@@ -11,6 +11,7 @@ import {
   type Banner,
   type Coupon,
 } from "./mobile-data";
+import { defaultTexts, type AppTexts } from "./app-texts";
 
 export type AppBrand = {
   appName: string;
@@ -29,6 +30,7 @@ type ConfigState = {
   brand: AppBrand;
   theme: AppTheme;
   currency: string;
+  texts: AppTexts;
   categories: Category[];
   products: Product[];
   banners: Banner[];
@@ -54,6 +56,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
   brand: defaultBrand,
   theme: defaultTheme,
   currency: "USD",
+  texts: { ...defaultTexts },
   categories: defaultCategories,
   products: defaultProducts,
   banners: defaultBanners,
@@ -69,6 +72,7 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         brand: data.brand ?? defaultBrand,
         theme: data.theme ?? defaultTheme,
         currency: data.currency ?? "USD",
+        texts: { ...defaultTexts, ...(data.texts ?? {}) },
         categories: data.categories ?? defaultCategories,
         products: data.products ?? defaultProducts,
         banners: data.banners ?? defaultBanners,

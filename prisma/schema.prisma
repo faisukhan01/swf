@@ -45,6 +45,7 @@ model AppConfig {
   accentColor     String   @default("#f59e0b")
   darkModeDefault Boolean  @default(false)
   currency        String   @default("USD")
+  texts           String   @default("{}") // JSON object of editable text strings
   updatedAt       DateTime @updatedAt
 }
 

@@ -275,7 +275,9 @@ function BannerCarousel() {
 function HomeScreen() {
   const t = useTheme();
   const push = useMobileStore((s) => s.push);
+  const user = useMobileStore((s) => s.user);
   const brand = useConfigStore((s) => s.brand);
+  const texts = useConfigStore((s) => s.texts);
   const products = useConfigStore((s) => s.products);
   const categories = useConfigStore((s) => s.categories);
   const productMap = useProductMap();
@@ -290,10 +292,13 @@ function HomeScreen() {
         <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/10" />
         <div className="absolute -bottom-12 -left-6 w-24 h-24 rounded-full bg-amber-300/15" />
         <div className="flex items-center justify-between relative">
-          <div>
-            <p className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.85)" }}>Good morning, Faisu 👋</p>
-            <p className="text-[15px] font-extrabold text-white tracking-tight">{brand.appName}</p>
-            <p className="text-[10px] font-medium mt-0.5" style={{ color: "rgba(255,255,255,0.8)" }}>{brand.tagline}</p>
+          <div className={user ? "" : "cursor-pointer"} onClick={() => { if (!user) push("SignIn"); }}>
+            <p className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.85)" }}>
+              {user ? `${texts.greetingSignedInPrefix} ${user.name.split(" ")[0]} 👋` : texts.greetingSignedOut}
+            </p>
+            <p className="text-[15px] font-extrabold text-white tracking-tight">
+              {user ? brand.tagline : texts.greetingSignedOutSub}
+            </p>
           </div>
           <button onClick={() => push("Notifications")} className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md" style={{ backgroundColor: "rgba(255,255,255,0.2)" }}>
             <Bell size={16} className="text-white" />
@@ -305,7 +310,7 @@ function HomeScreen() {
           style={{ backgroundColor: "rgba(255,255,255,0.97)", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
         >
           <Search size={15} className="text-slate-400" />
-          <span className="text-[11px] text-slate-400">Search products, brands...</span>
+          <span className="text-[11px] text-slate-400">{texts.searchPlaceholder}</span>
         </button>
       </div>
 
@@ -316,7 +321,7 @@ function HomeScreen() {
       </div>
 
       <div className="px-3.5 mt-5">
-        <SectionHeader title="Categories" onSeeAll={() => useMobileStore.getState().setTab("shop")} />
+        <SectionHeader title={texts.sectionCategories} onSeeAll={() => useMobileStore.getState().setTab("shop")} />
         <div className="flex gap-3 overflow-x-auto pb-1 -mx-3.5 px-3.5" style={{ scrollbarWidth: "none" }}>
           {categories.map((c) => (
             <button key={c.id} onClick={() => { useMobileStore.getState().setTab("shop"); }} className="flex flex-col items-center gap-1.5 w-14 shrink-0">
@@ -330,7 +335,7 @@ function HomeScreen() {
       </div>
 
       <div className="px-3.5 mt-5">
-        <SectionHeader title="⚡ Flash Deals" accent onSeeAll={() => useMobileStore.getState().setTab("shop")} />
+        <SectionHeader title={texts.sectionFlashDeals} accent onSeeAll={() => useMobileStore.getState().setTab("shop")} />
         <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-3.5 px-3.5" style={{ scrollbarWidth: "none" }}>
           {flash.map((p) => (
             <div key={p.id} className="w-28 shrink-0">
@@ -341,7 +346,7 @@ function HomeScreen() {
       </div>
 
       <div className="px-3.5 mt-5 mb-4">
-        <SectionHeader title="Trending Now" onSeeAll={() => useMobileStore.getState().setTab("shop")} />
+        <SectionHeader title={texts.sectionTrending} onSeeAll={() => useMobileStore.getState().setTab("shop")} />
         <div className="grid grid-cols-2 gap-2.5">
           {trending.map((p) => (
             <ProductCard key={p.id} p={p} onClick={() => push("ProductDetail", { id: p.id })} />
@@ -351,7 +356,7 @@ function HomeScreen() {
 
       {rvProducts.length > 0 && (
         <div className="px-3.5 mb-4">
-          <SectionHeader title="Recently Viewed" onSeeAll={() => push("RecentlyViewed")} />
+          <SectionHeader title={texts.sectionRecentlyViewed} onSeeAll={() => push("RecentlyViewed")} />
           <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-3.5 px-3.5" style={{ scrollbarWidth: "none" }}>
             {rvProducts.map((p) => (
               <div key={p.id} className="w-28 shrink-0">
@@ -668,6 +673,7 @@ function CartScreen() {
   const couponCode = useMobileStore((s) => s.couponCode);
   const applyCoupon = useMobileStore((s) => s.applyCoupon);
   const productMap = useProductMap();
+  const texts = useConfigStore((s) => s.texts);
   const coupons = useConfigStore((s) => s.coupons);
   const [code, setCode] = useState("");
 
@@ -688,10 +694,10 @@ function CartScreen() {
         <div className="w-20 h-20 rounded-full flex items-center justify-center" style={{ backgroundColor: t.primarySoft }}>
           <ShoppingBag size={32} style={{ color: t.primary }} />
         </div>
-        <h2 className="text-[14px] font-bold mt-3" style={{ color: t.text }}>Your cart is empty</h2>
-        <p className="text-[10px] mt-1" style={{ color: t.muted }}>Add products to start shopping</p>
+        <h2 className="text-[14px] font-bold mt-3" style={{ color: t.text }}>{texts.cartEmptyTitle}</h2>
+        <p className="text-[10px] mt-1" style={{ color: t.muted }}>{texts.cartEmptySub}</p>
         <button onClick={() => useMobileStore.getState().setTab("home")} className="mt-3 px-4 py-2 rounded-xl text-[11px] font-bold text-white" style={{ backgroundColor: t.primary }}>
-          Browse Products
+          {texts.cartBrowseButton}
         </button>
       </div>
     );
@@ -967,6 +973,7 @@ function ProfileScreen() {
   const user = useMobileStore((s) => s.user);
   const signOut = useMobileStore((s) => s.signOut);
   const brand = useConfigStore((s) => s.brand);
+  const texts = useConfigStore((s) => s.texts);
 
   // ---- SIGNED OUT STATE ----
   if (!user) {
@@ -976,8 +983,8 @@ function ProfileScreen() {
           <div className="w-16 h-16 rounded-full bg-white/20 backdrop-blur-md flex items-center justify-center">
             <User size={28} className="text-white" />
           </div>
-          <h2 className="text-[16px] font-extrabold text-white mt-2.5">Welcome to {brand.appName}</h2>
-          <p className="text-[11px] text-white/85 mt-1 text-center px-4">Sign in to sync your cart, orders & wishlist across devices</p>
+          <h2 className="text-[16px] font-extrabold text-white mt-2.5">{texts.profileWelcomePrefix} {brand.appName}</h2>
+          <p className="text-[11px] text-white/85 mt-1 text-center px-4">{texts.profileWelcomeSub}</p>
         </div>
         <div className="p-3.5 space-y-2.5">
           <button
@@ -985,14 +992,14 @@ function ProfileScreen() {
             className="w-full py-3 rounded-2xl text-[12px] font-bold text-white flex items-center justify-center gap-1.5 shadow-lg"
             style={{ backgroundColor: t.primary, boxShadow: `0 4px 14px ${t.primary}40` }}
           >
-            Sign In
+            {texts.signInButton}
           </button>
           <button
             onClick={() => push("SignUp")}
             className="w-full py-3 rounded-2xl text-[12px] font-bold flex items-center justify-center gap-1.5"
             style={{ backgroundColor: t.surface, color: t.primary, border: `1.5px solid ${t.primary}` }}
           >
-            Create Account
+            {texts.signUpButton}
           </button>
         </div>
         <div className="p-3.5">
@@ -1090,7 +1097,7 @@ function ProfileScreen() {
           className="w-full py-2.5 rounded-xl text-[11px] font-bold flex items-center justify-center gap-1.5"
           style={{ backgroundColor: "#ef444411", color: "#ef4444", border: `1px solid #ef444433` }}
         >
-          <LogOut size={13} /> Sign Out
+          <LogOut size={13} /> {texts.signOutButton}
         </button>
       </div>
       <div className="px-3 pb-6 text-center">
@@ -1704,6 +1711,7 @@ function SignInScreen() {
   const push = useMobileStore((s) => s.push);
   const signIn = useMobileStore((s) => s.signIn);
   const brand = useConfigStore((s) => s.brand);
+  const texts = useConfigStore((s) => s.texts);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPw, setShowPw] = useState(false);
@@ -1768,8 +1776,8 @@ function SignInScreen() {
           <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-lg" style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}>
             <ShoppingBag size={28} className="text-white" />
           </div>
-          <h2 className="text-[17px] font-extrabold mt-3" style={{ color: t.text }}>Welcome back</h2>
-          <p className="text-[11px] mt-1" style={{ color: t.muted }}>Sign in to continue shopping with {brand.appName}</p>
+          <h2 className="text-[17px] font-extrabold mt-3" style={{ color: t.text }}>{texts.signInTitle}</h2>
+          <p className="text-[11px] mt-1" style={{ color: t.muted }}>{texts.signInSub} {brand.appName}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -1834,6 +1842,7 @@ function SignUpScreen() {
   const push = useMobileStore((s) => s.push);
   const signIn = useMobileStore((s) => s.signIn);
   const brand = useConfigStore((s) => s.brand);
+  const texts = useConfigStore((s) => s.texts);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -1874,8 +1883,8 @@ function SignUpScreen() {
           <div className="w-16 h-16 rounded-2xl mx-auto flex items-center justify-center shadow-lg" style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}>
             <UserPlus size={28} className="text-white" />
           </div>
-          <h2 className="text-[17px] font-extrabold mt-3" style={{ color: t.text }}>Join {brand.appName}</h2>
-          <p className="text-[11px] mt-1" style={{ color: t.muted }}>Create an account to start your shopping journey</p>
+          <h2 className="text-[17px] font-extrabold mt-3" style={{ color: t.text }}>{texts.signUpTitle} {brand.appName}</h2>
+          <p className="text-[11px] mt-1" style={{ color: t.muted }}>{texts.signUpSub}</p>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -2309,18 +2318,9 @@ export function PhonePreview() {
           {/* dynamic island */}
           <div className="absolute top-1.5 left-1/2 -translate-x-1/2 w-20 h-5 rounded-full z-30" style={{ backgroundColor: "#000" }} />
 
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={top.screen + (top.params?.id ?? "")}
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              transition={{ duration: 0.18 }}
-              className="flex-1 flex flex-col relative overflow-hidden"
-            >
-              <CurrentScreen />
-            </motion.div>
-          </AnimatePresence>
+          <div key={top.screen + (top.params?.id ?? "")} className="flex-1 flex flex-col relative overflow-hidden">
+            <CurrentScreen />
+          </div>
 
           {!hideBottomNav && <BottomNav />}
 
