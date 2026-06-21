@@ -37,6 +37,7 @@ export type AppUser = {
   name: string;
   email: string;
   joinedAt: string;
+  isAdmin?: boolean;
 };
 
 type State = {

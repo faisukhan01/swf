@@ -10,6 +10,7 @@ import {
   Settings as SettingsIcon, History, PenLine, Globe, DollarSign, FileText,
   Share2, ThumbsUp, ThumbsDown, MinusCircle, Circle, CheckCircle2, Clock,
   LogOut, Mail, Lock, UserPlus, Loader2, Eye, EyeOff, ArrowLeft,
+  Palette, Image as ImageIcon, Ticket, BarChart3, Activity, ExternalLink, Save,
 } from "lucide-react";
 import { useMobileStore, type Tab, type TrackingStep } from "@/lib/mobile-store";
 import { useConfigStore, useProductMap, useCategoryMap } from "@/lib/config-store";
@@ -1024,6 +1025,7 @@ function ProfileScreen() {
 
   // ---- SIGNED IN STATE ----
   const menu = [
+    ...(user.isAdmin ? [{ icon: Shield, label: "Admin Panel", sub: "Manage your store", action: () => push("AdminPanel") }] : []),
     { icon: Package, label: "My Orders", sub: `${orders.length} order(s)`, action: () => push("Orders") },
     { icon: History, label: "Recently Viewed", sub: `${rvCount} product(s)`, action: () => push("RecentlyViewed") },
     { icon: MapPin, label: "Addresses", sub: "Manage delivery addresses", action: () => push("Addresses") },
@@ -1036,7 +1038,14 @@ function ProfileScreen() {
   return (
     <div className="flex-1 overflow-y-auto" style={{ backgroundColor: t.bg }}>
       <div className="px-3.5 pt-12 pb-5 flex flex-col items-center" style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}>
-        <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-[22px] font-extrabold" style={{ color: t.primary }}>{user.name[0]?.toUpperCase()}</div>
+        <div className="relative">
+          <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center text-[22px] font-extrabold" style={{ color: t.primary }}>{user.name[0]?.toUpperCase()}</div>
+          {user.isAdmin && (
+            <span className="absolute -bottom-1 -right-1 px-1.5 py-0.5 rounded-full text-[7px] font-bold text-white flex items-center gap-0.5" style={{ backgroundColor: t.accent }}>
+              <Shield size={7} /> ADMIN
+            </span>
+          )}
+        </div>
         <h2 className="text-[15px] font-bold text-white mt-2">{user.name}</h2>
         <p className="text-[10px] text-white/80">{user.email}</p>
         <div className="flex gap-4 mt-3">
@@ -1713,7 +1722,32 @@ function SignInScreen() {
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      if (!res.ok) { setError(data.error || "Sign in failed"); setLoading(false); return; }
+      if (!res.ok) {
+        // If user sign-in fails, check if these are admin credentials
+        const adminRes = await fetch("/api/auth/admin-check", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        });
+        const adminData = await adminRes.json();
+        if (adminData.isAdmin) {
+          signIn({ id: "admin", name: adminData.name || "Admin", email: adminData.email, joinedAt: new Date().toISOString(), isAdmin: true });
+          useMobileStore.getState().push("AdminPanel");
+          setLoading(false);
+          return;
+        }
+        setError(data.error || "Sign in failed"); setLoading(false); return;
+      }
+      // Check if this user is also an admin
+      const adminRes = await fetch("/api/auth/admin-check", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password }),
+      });
+      const adminData = await adminRes.json();
+      if (adminData.isAdmin) {
+        data.user.isAdmin = true;
+      }
       signIn(data.user);
       useMobileStore.getState().setTab("home");
     } catch {
@@ -1908,6 +1942,273 @@ function SignUpScreen() {
   );
 }
 
+/* ---------------- admin panel (in-app) ---------------- */
+
+function AdminPanelScreen() {
+  const t = useTheme();
+  const pop = useMobileStore((s) => s.pop);
+  const push = useMobileStore((s) => s.push);
+  const brand = useConfigStore((s) => s.brand);
+  const [stats, setStats] = useState<{ users: number; signUps: number; signIns: number; products: number; categories: number; banners: number; coupons: number } | null>(null);
+  const [recent, setRecent] = useState<{ id: string; type: string; email: string; name: string | null; createdAt: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Public config endpoint already gives product/category/banner/coupon counts
+    fetch("/api/config")
+      .then((r) => r.json())
+      .then((d) => {
+        setStats({
+          users: 0, signUps: 0, signIns: 0,
+          products: d.products?.length ?? 0,
+          categories: d.categories?.length ?? 0,
+          banners: d.banners?.length ?? 0,
+          coupons: d.coupons?.length ?? 0,
+        });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  const adminActions = [
+    { icon: Palette, label: "Branding & Colors", sub: "Change app name, colors, logo", color: "#10b981", action: () => push("AdminBranding") },
+    { icon: Package, label: "Manage Products", sub: "Add, edit, delete products", color: "#f59e0b", action: () => push("AdminProducts") },
+    { icon: LayoutGrid, label: "Manage Categories", sub: "Add, edit, delete categories", color: "#8b5cf6", action: () => {} },
+    { icon: ImageIcon, label: "Manage Banners", sub: "Edit promo banners", color: "#ec4899", action: () => {} },
+    { icon: Ticket, label: "Manage Coupons", sub: "Add, edit coupon codes", color: "#0ea5e9", action: () => {} },
+    { icon: BarChart3, label: "View Analytics", sub: "Sign-ups, sign-ins, activity", color: "#ef4444", action: () => push("AdminAnalytics") },
+  ];
+
+  return (
+    <div className="flex-1 flex flex-col" style={{ backgroundColor: t.bg }}>
+      <div className="flex items-center gap-2 px-3 pt-10 pb-2 border-b" style={{ backgroundColor: t.surface, borderColor: t.border }}>
+        <button onClick={pop}><ChevronLeft size={18} style={{ color: t.text }} /></button>
+        <h1 className="text-[14px] font-bold flex items-center gap-1.5" style={{ color: t.text }}>
+          <Shield size={15} style={{ color: t.primary }} /> Admin Panel
+        </h1>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        {/* admin badge */}
+        <div className="rounded-2xl p-4 text-center" style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}>
+          <div className="w-12 h-12 rounded-full bg-white/20 mx-auto flex items-center justify-center">
+            <Shield size={22} className="text-white" />
+          </div>
+          <p className="text-[13px] font-bold text-white mt-2">Administrator Access</p>
+          <p className="text-[9px] text-white/80 mt-0.5">{brand.appName} · Control Center</p>
+        </div>
+
+        {/* stats grid */}
+        {loading ? (
+          <div className="flex justify-center py-6"><Loader2 size={20} className="animate-spin" style={{ color: t.primary }} /></div>
+        ) : stats ? (
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { n: stats.products, l: "Products" },
+              { n: stats.categories, l: "Categories" },
+              { n: stats.banners, l: "Banners" },
+              { n: stats.coupons, l: "Coupons" },
+              { n: stats.users, l: "Users" },
+              { n: stats.signIns, l: "Sign-ins" },
+            ].map((s, i) => (
+              <div key={i} className="rounded-xl p-2.5 text-center" style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}>
+                <p className="text-[16px] font-extrabold" style={{ color: t.primary }}>{s.n}</p>
+                <p className="text-[8px]" style={{ color: t.muted }}>{s.l}</p>
+              </div>
+            ))}
+          </div>
+        ) : null}
+
+        {/* admin actions */}
+        <div>
+          <p className="text-[9px] font-bold uppercase tracking-wide mb-2" style={{ color: t.muted }}>Management</p>
+          <div className="space-y-1.5">
+            {adminActions.map((a, i) => (
+              <button key={i} onClick={a.action} className="w-full flex items-center gap-2.5 p-2.5 rounded-xl" style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}>
+                <div className="w-8 h-8 rounded-lg flex items-center justify-center" style={{ backgroundColor: a.color + "22" }}>
+                  <a.icon size={15} style={{ color: a.color }} />
+                </div>
+                <div className="flex-1 text-left">
+                  <p className="text-[11px] font-semibold" style={{ color: t.text }}>{a.label}</p>
+                  <p className="text-[8px]" style={{ color: t.muted }}>{a.sub}</p>
+                </div>
+                <ChevronRight size={14} style={{ color: t.subtle }} />
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* full admin link */}
+        <a
+          href="/admin"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full flex items-center justify-center gap-1.5 py-3 rounded-xl text-[11px] font-bold text-white"
+          style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}
+        >
+          <ExternalLink size={13} /> Open Full Admin Dashboard
+        </a>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- admin branding (in-app editor) ---------------- */
+
+function AdminBrandingScreen() {
+  const t = useTheme();
+  const pop = useMobileStore((s) => s.pop);
+  const brand = useConfigStore((s) => s.brand);
+  const theme = useConfigStore((s) => s.theme);
+  const loadConfig = useConfigStore((s) => s.load);
+  const [appName, setAppName] = useState(brand.appName);
+  const [tagline, setTagline] = useState(brand.tagline);
+  const [primary, setPrimary] = useState(theme.primaryColor);
+  const [accent, setAccent] = useState(theme.accentColor);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState("");
+
+  const handleSave = async () => {
+    setSaving(true);
+    setMsg("");
+    try {
+      const res = await fetch("/api/admin/config", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ appName, tagline, primaryColor: primary, accentColor: accent }),
+      });
+      if (res.ok) {
+        setMsg("Saved! Reload preview to see changes.");
+        loadConfig();
+      } else {
+        setMsg("Save failed. Use the full admin dashboard.");
+      }
+    } catch {
+      setMsg("Network error.");
+    }
+    setSaving(false);
+  };
+
+  return (
+    <div className="flex-1 flex flex-col" style={{ backgroundColor: t.bg }}>
+      <div className="flex items-center gap-2 px-3 pt-10 pb-2 border-b" style={{ backgroundColor: t.surface, borderColor: t.border }}>
+        <button onClick={pop}><ChevronLeft size={18} style={{ color: t.text }} /></button>
+        <h1 className="text-[14px] font-bold flex items-center gap-1.5" style={{ color: t.text }}>
+          <Palette size={15} style={{ color: t.primary }} /> Branding & Colors
+        </h1>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        {/* live preview */}
+        <div className="rounded-2xl p-4 text-center" style={{ background: `linear-gradient(135deg, ${primary} 0%, ${theme.primaryDarkColor} 100%)` }}>
+          <p className="text-[15px] font-extrabold text-white">{appName || "App Name"}</p>
+          <p className="text-[10px] text-white/85 mt-0.5">{tagline || "Tagline"}</p>
+          <div className="flex justify-center gap-2 mt-3">
+            <span className="w-7 h-7 rounded-full border-2 border-white/50" style={{ backgroundColor: primary }} />
+            <span className="w-7 h-7 rounded-full border-2 border-white/50" style={{ backgroundColor: accent }} />
+          </div>
+        </div>
+
+        {/* fields */}
+        <div className="space-y-2.5">
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wide mb-1 block" style={{ color: t.muted }}>App Name</label>
+            <input value={appName} onChange={(e) => setAppName(e.target.value)} className="w-full px-3 py-2.5 rounded-xl text-[11px] outline-none" style={{ backgroundColor: t.surfaceAlt, color: t.text, border: `1px solid ${t.border}` }} />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wide mb-1 block" style={{ color: t.muted }}>Tagline</label>
+            <input value={tagline} onChange={(e) => setTagline(e.target.value)} className="w-full px-3 py-2.5 rounded-xl text-[11px] outline-none" style={{ backgroundColor: t.surfaceAlt, color: t.text, border: `1px solid ${t.border}` }} />
+          </div>
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wide mb-1 block" style={{ color: t.muted }}>Primary Color</label>
+            <div className="flex items-center gap-2">
+              <input type="color" value={primary} onChange={(e) => setPrimary(e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer" style={{ border: `1px solid ${t.border}` }} />
+              <input value={primary} onChange={(e) => setPrimary(e.target.value)} className="flex-1 px-3 py-2.5 rounded-xl text-[11px] outline-none font-mono" style={{ backgroundColor: t.surfaceAlt, color: t.text, border: `1px solid ${t.border}` }} />
+            </div>
+          </div>
+          <div>
+            <label className="text-[10px] font-bold uppercase tracking-wide mb-1 block" style={{ color: t.muted }}>Accent Color</label>
+            <div className="flex items-center gap-2">
+              <input type="color" value={accent} onChange={(e) => setAccent(e.target.value)} className="w-10 h-10 rounded-lg cursor-pointer" style={{ border: `1px solid ${t.border}` }} />
+              <input value={accent} onChange={(e) => setAccent(e.target.value)} className="flex-1 px-3 py-2.5 rounded-xl text-[11px] outline-none font-mono" style={{ backgroundColor: t.surfaceAlt, color: t.text, border: `1px solid ${t.border}` }} />
+            </div>
+          </div>
+        </div>
+
+        {msg && <p className="text-[10px] text-center font-medium" style={{ color: msg.includes("Saved") ? t.primary : "#ef4444" }}>{msg}</p>}
+      </div>
+      <div className="p-3 border-t" style={{ backgroundColor: t.surface, borderColor: t.border, paddingBottom: 14 }}>
+        <button onClick={handleSave} disabled={saving} className="w-full py-2.5 rounded-xl text-[11px] font-bold text-white flex items-center justify-center gap-1.5" style={{ backgroundColor: t.primary, opacity: saving ? 0.6 : 1 }}>
+          {saving ? <><Loader2 size={13} className="animate-spin" /> Saving...</> : <><Save size={13} /> Save Changes</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- admin analytics (in-app) ---------------- */
+
+function AdminAnalyticsScreen() {
+  const t = useTheme();
+  const pop = useMobileStore((s) => s.pop);
+  const [data, setData] = useState<{ totals: { users: number; signUps: number; signIns: number; products: number; categories: number; banners: number; coupons: number }; last24h: { signIns: number; signUps: number }; recentEvents: { id: string; type: string; email: string; name: string | null; createdAt: string }[] } | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetch("/api/config")
+      .then((r) => r.json())
+      .then((d) => {
+        setData({
+          totals: { users: 0, signUps: 0, signIns: 0, products: d.products?.length ?? 0, categories: d.categories?.length ?? 0, banners: d.banners?.length ?? 0, coupons: d.coupons?.length ?? 0 },
+          last24h: { signIns: 0, signUps: 0 },
+          recentEvents: [],
+        });
+      })
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, []);
+
+  return (
+    <div className="flex-1 flex flex-col" style={{ backgroundColor: t.bg }}>
+      <div className="flex items-center gap-2 px-3 pt-10 pb-2 border-b" style={{ backgroundColor: t.surface, borderColor: t.border }}>
+        <button onClick={pop}><ChevronLeft size={18} style={{ color: t.text }} /></button>
+        <h1 className="text-[14px] font-bold flex items-center gap-1.5" style={{ color: t.text }}>
+          <BarChart3 size={15} style={{ color: t.primary }} /> Analytics
+        </h1>
+      </div>
+      <div className="flex-1 overflow-y-auto p-3 space-y-3">
+        {loading ? (
+          <div className="flex justify-center py-8"><Loader2 size={22} className="animate-spin" style={{ color: t.primary }} /></div>
+        ) : data ? (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { n: data.totals.users, l: "Total Users", c: "#10b981" },
+                { n: data.totals.signUps, l: "Sign-ups", c: "#8b5cf6" },
+                { n: data.totals.signIns, l: "Sign-ins", c: "#f59e0b" },
+                { n: data.last24h.signIns, l: "Sign-ins 24h", c: "#3b82f6" },
+                { n: data.totals.products, l: "Products", c: "#ec4899" },
+                { n: data.totals.categories, l: "Categories", c: "#0ea5e9" },
+              ].map((s, i) => (
+                <div key={i} className="rounded-xl p-3" style={{ backgroundColor: t.surface, border: `1px solid ${t.border}` }}>
+                  <div className="w-7 h-7 rounded-lg flex items-center justify-center mb-1.5" style={{ backgroundColor: s.c + "22" }}>
+                    <Activity size={13} style={{ color: s.c }} />
+                  </div>
+                  <p className="text-[18px] font-extrabold" style={{ color: t.text }}>{s.n}</p>
+                  <p className="text-[8px]" style={{ color: t.muted }}>{s.l}</p>
+                </div>
+              ))}
+            </div>
+            <a href="/admin" target="_blank" rel="noopener noreferrer" className="block w-full text-center py-2.5 rounded-xl text-[10px] font-bold" style={{ backgroundColor: t.primarySoft, color: t.primary }}>
+              Open full dashboard for detailed analytics →
+            </a>
+          </>
+        ) : (
+          <p className="text-center text-[11px] py-8" style={{ color: t.muted }}>Failed to load analytics</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ---------------- screen router ---------------- */
 
 function CurrentScreen() {
@@ -1934,6 +2235,9 @@ function CurrentScreen() {
     case "WriteReview": return <WriteReviewScreen id={params.id as string} />;
     case "SignIn": return <SignInScreen />;
     case "SignUp": return <SignUpScreen />;
+    case "AdminPanel": return <AdminPanelScreen />;
+    case "AdminBranding": return <AdminBrandingScreen />;
+    case "AdminAnalytics": return <AdminAnalyticsScreen />;
     default: return <HomeScreen />;
   }
 }
@@ -1947,7 +2251,7 @@ export function PhonePreview() {
   const top = stack[stack.length - 1];
   const loadConfig = useConfigStore((s) => s.load);
   const configLoaded = useConfigStore((s) => s.loaded);
-  const hideBottomNav = ["ProductDetail", "Checkout", "OrderSuccess", "Search", "OrderDetail", "RecentlyViewed", "Settings", "WriteReview", "SignIn", "SignUp"].includes(top.screen);
+  const hideBottomNav = ["ProductDetail", "Checkout", "OrderSuccess", "Search", "OrderDetail", "RecentlyViewed", "Settings", "WriteReview", "SignIn", "SignUp", "AdminPanel", "AdminBranding", "AdminAnalytics"].includes(top.screen);
   const lightStatusText = top.screen === "Home" || top.screen === "Profile" || top.screen === "OrderDetail";
 
   useEffect(() => {

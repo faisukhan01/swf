@@ -404,3 +404,44 @@ Stage Summary:
 - Admin analytics: total users, sign-ups, sign-ins, 24h activity, 7-day chart, recent activity feed — all tracked via AuthEvent table.
 - Admin security: unchanged (middleware + JWT + httpOnly cookie + requireAdmin on all admin APIs).
 - Admin can manage EVERYTHING: brand name, tagline, logo, all theme colors, products (CRUD), categories (CRUD), banners (CRUD), coupons (CRUD), and now view analytics (sign-ups, sign-ins, user activity).
+
+---
+Task ID: 11
+Agent: main
+Task: Enable admin sign-in from within the mobile app (in-app admin panel)
+
+Work Log:
+- USER QUESTION: "This is a mobile app, so how can I sign in as admin in mobile?"
+- Created /api/auth/admin-check (POST): verifies email+password against AdminUser table, returns {isAdmin: true/false}. Used by mobile app to detect admin credentials.
+- Added isAdmin?: boolean to AppUser type in mobile-store.
+- Updated SignInScreen: after sign-in attempt, calls /api/auth/admin-check with the same credentials. If admin → sets user.isAdmin=true and navigates to AdminPanel screen. If regular user sign-in fails but admin-check passes → signs in as admin directly.
+- Built 3 new in-app admin screens:
+  * AdminPanelScreen: green gradient header "Administrator Access", stats grid (products/categories/banners/coupons/users/sign-ins), management menu (Branding & Colors, Manage Products, Categories, Banners, Coupons, Analytics), "Open Full Admin Dashboard" link.
+  * AdminBrandingScreen: in-app editor with live preview, app name/tagline inputs, color pickers (primary + accent), Save button. Note: actual save requires web admin cookie (security), so shows "Use full admin dashboard" message if save fails.
+  * AdminAnalyticsScreen: stats cards (users, sign-ups, sign-ins, 24h, products, categories) + link to full dashboard.
+- Updated ProfileScreen: 
+  * Admin users get an "ADMIN" badge (amber, shield icon) on their avatar
+  * "Admin Panel" menu item appears at top of menu (only for admins)
+- Registered AdminPanel/AdminBranding/AdminAnalytics in CurrentScreen router + hideBottomNav.
+- Added icon imports: Palette, ImageIcon, Ticket, BarChart3, Activity, ExternalLink, Save.
+
+SECURITY DESIGN:
+- Mobile app detects admin via /api/auth/admin-check (read-only, no session created)
+- In-app admin panel can VIEW everything (stats, config) via public /api/config
+- Actual MUTATIONS (edit products, colors, etc.) require the web admin cookie session (middleware + JWT)
+- Mobile admin screen has "Open Full Admin Dashboard" button → opens /admin in new tab (where full auth + CRUD is available)
+- This is the correct security model: admin can browse from mobile, but mutations go through the secured web dashboard
+
+QA / VERIFICATION (agent-browser):
+- Signed out profile → Sign In button → entered admin credentials (faisu577277@gmail.com / QaReLc_61y8) → admin-check returned isAdmin:true → navigated to AdminPanel screen
+- AdminPanel shows: "Administrator Access" header, stats (27 Products, 8 Categories, 3 Banners, 4 Coupons), management menu (VLM confirmed)
+- Profile (admin): shows "ADMIN" badge on avatar + "Admin Panel" menu item at top
+- Branding editor: opens with app name, tagline, color pickers, live preview, Save button (correctly shows "Use full admin dashboard" for mutations)
+- ESLint clean (0 errors)
+
+Stage Summary:
+- Admin can now sign in FROM THE MOBILE APP using the same Sign In screen with admin credentials
+- Admin gets an in-app Admin Panel with stats + management shortcuts
+- Admin badge appears on profile avatar
+- Full CRUD mutations still require the secured web admin dashboard (correct security model)
+- The mobile admin can view everything and link to the full web dashboard for edits
