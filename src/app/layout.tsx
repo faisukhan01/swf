@@ -14,24 +14,22 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Z.ai Code Scaffold - AI-Powered Development",
-  description: "Modern Next.js scaffold optimized for AI-powered development with Z.ai. Built with TypeScript, Tailwind CSS, and shadcn/ui.",
-  keywords: ["Z.ai", "Next.js", "TypeScript", "Tailwind CSS", "shadcn/ui", "AI development", "React"],
-  authors: [{ name: "Z.ai Team" }],
+  title: "Shop With Faisu!! — React Native Ecommerce App",
+  description: "A complete, real Android ecommerce app built with React Native + Expo + TypeScript. Live interactive preview plus full source code.",
+  keywords: ["Shop With Faisu", "React Native", "Expo", "ecommerce", "mobile app", "Android", "TypeScript"],
+  authors: [{ name: "Faisu" }],
   icons: {
-    icon: "https://z-cdn.chatglm.cn/z-ai/static/logo.svg",
+    icon: "/brand/logo.png",
   },
   openGraph: {
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
-    url: "https://chat.z.ai",
-    siteName: "Z.ai",
+    title: "Shop With Faisu!! — React Native Ecommerce App",
+    description: "Built with React Native + Expo + TypeScript. Live preview + full source.",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "Z.ai Code Scaffold",
-    description: "AI-powered development with modern React stack",
+    title: "Shop With Faisu!!",
+    description: "React Native + Expo ecommerce app",
   },
 };
 
