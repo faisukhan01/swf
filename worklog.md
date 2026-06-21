@@ -151,3 +151,60 @@ Stage Summary:
 - Recently Viewed: products are auto-tracked on ProductDetail focus (deduped, capped at 20), surfaced as a horizontal rail on ProductDetail + a full grid screen with clear-all, and counted on the Profile menu subtitle.
 - Write Review: validates rating/title/body, supports recommend toggle + photo placeholders, sticky submit bar, success Alert → back.
 - `npx tsc --noEmit` passes with EXIT_CODE=0. Ready for the Next.js showcase agent to mirror these screens in the phone preview if desired.
+
+---
+Task ID: 7
+Agent: main (cron review round 1 + user-requested simplification)
+Task: Strip landing page to phone-only; add new screens (OrderDetail, Settings, RecentlyViewed, WriteReview); premium aesthetic polish; QA
+
+Work Log:
+- USER REQUEST: Remove landing page, keep ONLY the mobile preview. Make it complete, advanced, clean, premium, aesthetic.
+- Rewrote src/app/page.tsx → minimal: just <PhonePreview/> centered on dark ambient background (emerald+amber glow blurs, subtle dot grid). Removed hero, tabs, code browser, features, setup guide.
+- Extended src/lib/mobile-store.ts: added recentlyViewed[], reviews[], settings{} (pushNotif/emailNotif/orderUpdates/language/currency), TrackingStep type, addRecentlyViewed/clearRecentlyViewed/submitReview/updateSettings actions, order.tracking timeline (5 steps), all persisted.
+- Added 4 new screens to PhonePreview.tsx:
+  * OrderDetailScreen: status hero gradient, 5-step tracking timeline (Order Placed→Processing→Shipped→Out for Delivery→Delivered) with done/current/pending states, items list, delivery+payment cards
+  * SettingsScreen: iOS-style grouped sections (Preferences 3 toggles, Appearance dark mode, Region language+currency selectors, About). Extracted SettingsToggle component to fix react-hooks/static-components lint.
+  * RecentlyViewedScreen: grid of viewed products, clear button, empty state
+  * WriteReviewScreen: product summary, 5-star rating with hover+labels, title (60 char counter), body (1000 char counter, min 20), recommend Yes/No/Skip, validation, sticky submit
+- Updated ProductDetailScreen: addRecentlyViewed on mount (useEffect), Write a Review button, user reviews shown with YOU badge above sample reviews
+- Updated ProfileScreen: added Recently Viewed + Settings menu items with live counts
+- Updated OrdersScreen: order cards now navigate to OrderDetail
+- Updated CurrentScreen router: registered OrderDetail, Settings, RecentlyViewed, WriteReview
+- Premium aesthetic polish:
+  * Added cardShadow + elevShadow to theme tokens (light + dark)
+  * ProductCard: hover lift, backdrop-blur wishlist button, refined spacing
+  * Home header: gradient (primary→primaryDark), decorative blurred circles, elevated search bar, more spacing
+  * Category icons: inset ring border for depth
+  * BottomNav: backdrop-blur, active pill background (primarySoft), badge shadow
+  * Phone frame: dual-layer bezel with gradient border, dynamic island (rounded pill), realistic status bar (signal bars + 5G + battery icon), ambient glow
+- Bug fixes:
+  * Fixed "getSnapshot should be cached" infinite loop: ProductDetailScreen was using useMobileStore((s) => s.reviews.filter(...)) returning new array each render → changed to select raw reviews + useMemo filter
+  * Fixed react-hooks/static-components: extracted Toggle component out of SettingsScreen render scope
+  * Fixed react-hooks/set-state-in-effect: removed redundant state resets in ProductDetail useEffect
+- Added mobile-app/** already in eslint ignores; new RN screens (Task 6-a) verified tsc clean
+
+QA / Verification (agent-browser):
+- Page loads 200, no console/runtime errors
+- Home: gradient header, search, banner carousel, categories, flash deals, trending, recently viewed section appears after viewing a product
+- Product detail: Add to Cart + Buy Now + Write a Review buttons all present
+- Write Review: filled 5-star + title + body + Yes recommend → Submit → review persisted (reviews.length=1), navigated back, review shows on product with YOU badge
+- Cart → Checkout → Place Order ($129.99) → Order Placed success
+- Profile: shows "My Orders 1 order(s)" + "Recently Viewed 1 product(s)"
+- Orders → tap order → OrderDetail: all 5 tracking steps render (Order Placed/Processing/Shipped/Out for Delivery/Delivered), items, delivery+payment cards
+- Settings: all sections render (Preferences toggles, Appearance, Region selectors, About)
+- RecentlyViewed: shows viewed product + Clear button
+- Dark mode: toggles and persists, looks sleek (VLM 8/10)
+- VLM rated home premium 8/10 (light + dark)
+
+Stage Summary:
+- Landing page stripped → ONLY the phone preview shows, centered on premium dark ambient background
+- 4 new screens added (OrderDetail w/ tracking, Settings, RecentlyViewed, WriteReview) → app now has 16 screens, a complete ecommerce flow
+- Premium aesthetic: gradient header, refined cards with soft shadows, glassmorphic bottom nav, realistic phone frame with dynamic island + proper status bar icons
+- ESLint clean (0 errors), all routes 200, no runtime errors
+- All new features verified working end-to-end via agent-browser
+
+Unresolved / Next phase:
+- Could add Splash + Onboarding + Auth screens to the preview flow for an even more complete app feel (currently boots straight to Home)
+- Could add product comparison feature and a proper filter bottom-sheet on Shop
+- Banner carousel images flagged as LCP — could add loading="eager" (minor)
+- VLM noted flash deals card sizing could be more consistent (very minor)
