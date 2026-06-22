@@ -176,7 +176,7 @@ function BottomNav() {
 
   return (
     <div
-      className="flex items-center justify-around px-1.5 py-2 border-t backdrop-blur-xl"
+      className="fixed bottom-0 left-0 right-0 flex items-center justify-around px-1.5 py-2 border-t backdrop-blur-xl z-50"
       style={{ backgroundColor: t.surface + "f2", borderColor: t.border, paddingBottom: 18 }}
     >
       {tabs.map((tab) => {
@@ -2443,7 +2443,7 @@ export function PhonePreview() {
   if (isPWA) {
     return (
       <div className="w-full min-h-screen flex flex-col" style={{ backgroundColor: tokens.bg }}>
-        <div key={top.screen + (top.params?.id ?? "")} className="flex-1 flex flex-col relative overflow-hidden">
+        <div key={top.screen + (top.params?.id ?? "")} className="flex-1 flex flex-col relative overflow-hidden" style={{ paddingBottom: hideBottomNav ? 0 : 70 }}>
           <CurrentScreen />
         </div>
         {!hideBottomNav && <BottomNav />}
