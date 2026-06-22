@@ -1,10 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Lock, Mail, Eye, EyeOff, Shield, ArrowRight, Loader2 } from "lucide-react";
 
-export default function AdminLoginPage() {
+function AdminLoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const from = params.get("from") || "/admin";
@@ -120,5 +120,17 @@ export default function AdminLoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function AdminLoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-slate-950">
+        <Loader2 className="animate-spin text-emerald-500" size={32} />
+      </div>
+    }>
+      <AdminLoginForm />
+    </Suspense>
   );
 }

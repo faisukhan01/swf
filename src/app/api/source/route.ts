@@ -3,8 +3,8 @@ import fs from "fs";
 import path from "path";
 
 const CANDIDATES = [
-  path.resolve(process.cwd(), "mobile-app"),
-  path.resolve(process.cwd(), "..", "mobile-app"),
+  path.resolve(/*turbopackIgnore: true*/ process.cwd(), "mobile-app"),
+  path.resolve(/*turbopackIgnore: true*/ process.cwd(), "..", "mobile-app"),
 ];
 const MOBILE_ROOT = CANDIDATES.find((p) => fs.existsSync(p)) ?? CANDIDATES[0];
 
