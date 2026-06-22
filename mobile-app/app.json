@@ -23,11 +23,6 @@
         "backgroundColor": "#10b981"
       },
       "package": "com.faisu.shopwithfaisu"
-    },
-    "web": {
-      "bundler": "metro",
-      "output": "static",
-      "favicon": "./assets/icon.png"
     }
   }
 }

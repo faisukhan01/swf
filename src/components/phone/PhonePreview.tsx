@@ -17,6 +17,7 @@ import { useConfigStore, useProductMap, useCategoryMap } from "@/lib/config-stor
 import {
   sampleReviews, formatPrice, type Product,
 } from "@/lib/mobile-data";
+import { InstallButton } from "@/components/InstallPWA";
 
 /* ---------------- helpers ---------------- */
 
@@ -1023,8 +1024,14 @@ function ProfileScreen() {
             ))}
           </div>
         </div>
-        <div className="px-3.5 pb-6 text-center">
-          <p className="text-[9px]" style={{ color: t.subtle }}>{brand.appName} · v1.0.0</p>
+        <div className="px-3.5 pb-6">
+          {/* Install App Button */}
+          <div className="mb-4">
+            <InstallButton />
+          </div>
+          <div className="text-center">
+            <p className="text-[9px]" style={{ color: t.subtle }}>{brand.appName} · v1.0.0</p>
+          </div>
         </div>
       </div>
     );
@@ -1099,6 +1106,10 @@ function ProfileScreen() {
         >
           <LogOut size={13} /> {texts.signOutButton}
         </button>
+      </div>
+      {/* Install App Button */}
+      <div className="px-3 pb-3">
+        <InstallButton />
       </div>
       <div className="px-3 pb-6 text-center">
         <p className="text-[9px]" style={{ color: t.subtle }}>{brand.appName} · v1.0.0</p>
