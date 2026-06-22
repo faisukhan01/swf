@@ -44,12 +44,12 @@ function useTheme() {
 }
 
 const lightTokens = {
-  bg: "#f8fafc", surface: "#ffffff", surfaceAlt: "#f1f5f9", border: "#e2e8f0",
-  text: "#0f172a", muted: "#64748b", subtle: "#94a3b8",
+  bg: "#ffffff", surface: "#f8f9fa", surfaceAlt: "#f1f3f5", border: "#e9ecef",
+  text: "#212529", muted: "#868e96", subtle: "#adb5bd",
   primary: "#10b981", primaryDark: "#059669", primarySoft: "#d1fae5",
   accent: "#f59e0b", accentSoft: "#fef3c7", star: "#f59e0b",
-  cardShadow: "0 1px 3px rgba(15,23,42,0.06), 0 1px 2px rgba(15,23,42,0.04)",
-  elevShadow: "0 4px 14px rgba(15,23,42,0.08), 0 1px 3px rgba(15,23,42,0.04)",
+  cardShadow: "0 1px 3px rgba(0,0,0,0.04)",
+  elevShadow: "0 2px 8px rgba(0,0,0,0.06)",
 };
 const darkTokens = {
   bg: "#0b1120", surface: "#111827", surfaceAlt: "#1e293b", border: "#334155",
@@ -288,85 +288,121 @@ function HomeScreen() {
   const rvProducts = recentlyViewed.map((id) => productMap[id]).filter(Boolean).slice(0, 6);
 
   return (
-    <div className="flex-1 overflow-y-auto">
-      <div className="px-3.5 pt-11 pb-4 relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${t.primary} 0%, ${t.primaryDark} 100%)` }}>
-        <div className="absolute -top-8 -right-8 w-32 h-32 rounded-full bg-white/10" />
-        <div className="absolute -bottom-12 -left-6 w-24 h-24 rounded-full bg-amber-300/15" />
-        <div className="flex items-center justify-between relative">
-          <div className={user ? "" : "cursor-pointer"} onClick={() => { if (!user) push("SignIn"); }}>
-            <p className="text-[10px] font-medium" style={{ color: "rgba(255,255,255,0.85)" }}>
-              {user ? `${texts.greetingSignedInPrefix} ${user.name.split(" ")[0]} 👋` : texts.greetingSignedOut}
-            </p>
-            <p className="text-[15px] font-extrabold text-white tracking-tight">
-              {user ? brand.tagline : texts.greetingSignedOutSub}
+    <div className="flex-1 overflow-y-auto" style={{ backgroundColor: t.bg }}>
+      {/* Clean minimal header */}
+      <div className="px-4 pt-12 pb-4" style={{ backgroundColor: t.bg }}>
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h1 className="text-[22px] font-bold tracking-tight" style={{ color: t.text }}>
+              {brand.appName}
+            </h1>
+            <p className="text-[13px] mt-0.5" style={{ color: t.muted }}>
+              {brand.tagline}
             </p>
           </div>
-          <button onClick={() => push("Notifications")} className="w-9 h-9 rounded-full flex items-center justify-center backdrop-blur-md" style={{ backgroundColor: "rgba(255,255,255,0.2)" }}>
-            <Bell size={16} className="text-white" />
-          </button>
+          <div className="flex items-center gap-2">
+            <button 
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: t.surface }}
+            >
+              <Sun size={18} style={{ color: t.muted }} />
+            </button>
+            <button 
+              onClick={() => push("Notifications")}
+              className="w-10 h-10 rounded-full flex items-center justify-center"
+              style={{ backgroundColor: t.surface }}
+            >
+              <Bell size={18} style={{ color: t.muted }} />
+            </button>
+          </div>
         </div>
+
+        {/* Clean search bar */}
         <button
           onClick={() => push("Search")}
-          className="mt-3 w-full flex items-center gap-2 px-3.5 py-2.5 rounded-2xl backdrop-blur-md"
-          style={{ backgroundColor: "rgba(255,255,255,0.97)", boxShadow: "0 4px 12px rgba(0,0,0,0.08)" }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl"
+          style={{ backgroundColor: t.surface }}
         >
-          <Search size={15} className="text-slate-400" />
-          <span className="text-[11px] text-slate-400">{texts.searchPlaceholder}</span>
+          <Search size={18} style={{ color: t.muted }} />
+          <span className="text-[14px]" style={{ color: t.muted }}>{texts.searchPlaceholder}</span>
         </button>
       </div>
 
-      <div className="px-3.5 mt-4">
-        <div className="relative h-32 rounded-2xl overflow-hidden" style={{ boxShadow: t.elevShadow }}>
+      {/* Banner - Clean and modern */}
+      <div className="px-4 mt-2">
+        <div className="relative h-40 rounded-3xl overflow-hidden">
           <BannerCarousel />
         </div>
       </div>
 
-      <div className="px-3.5 mt-5">
-        <SectionHeader title={texts.sectionCategories} onSeeAll={() => useMobileStore.getState().setTab("shop")} />
-        <div className="flex gap-3 overflow-x-auto pb-1 -mx-3.5 px-3.5" style={{ scrollbarWidth: "none" }}>
-          {categories.map((c) => (
-            <button key={c.id} onClick={() => { useMobileStore.getState().setTab("shop"); }} className="flex flex-col items-center gap-1.5 w-14 shrink-0">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center" style={{ backgroundColor: c.color + "1a", boxShadow: `inset 0 0 0 1px ${c.color}22` }}>
-                <span className="text-base font-extrabold" style={{ color: c.color }}>{c.name[0]}</span>
+      {/* Categories - Minimal style */}
+      <div className="px-4 mt-8">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-[16px] font-bold" style={{ color: t.text }}>{texts.sectionCategories}</h2>
+          <button 
+            onClick={() => useMobileStore.getState().setTab("shop")}
+            className="text-[13px] font-medium flex items-center gap-1"
+            style={{ color: t.primary }}
+          >
+            See all <ChevronRight size={14} />
+          </button>
+        </div>
+        <div className="grid grid-cols-4 gap-4">
+          {categories.slice(0, 8).map((c) => (
+            <button 
+              key={c.id} 
+              onClick={() => { useMobileStore.getState().setTab("shop"); }}
+              className="flex flex-col items-center gap-2"
+            >
+              <div 
+                className="w-16 h-16 rounded-2xl flex items-center justify-center"
+                style={{ backgroundColor: t.surface }}
+              >
+                <span className="text-2xl">{c.icon}</span>
               </div>
-              <span className="text-[8px] font-medium text-center leading-tight" style={{ color: t.text }}>{c.name}</span>
+              <span className="text-[11px] font-medium text-center" style={{ color: t.text }}>
+                {c.name}
+              </span>
             </button>
           ))}
         </div>
       </div>
 
-      <div className="px-3.5 mt-5">
-        <SectionHeader title={texts.sectionFlashDeals} accent onSeeAll={() => useMobileStore.getState().setTab("shop")} />
-        <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-3.5 px-3.5" style={{ scrollbarWidth: "none" }}>
-          {flash.map((p) => (
-            <div key={p.id} className="w-28 shrink-0">
-              <ProductCard p={p} onClick={() => push("ProductDetail", { id: p.id })} />
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="px-3.5 mt-5 mb-4">
-        <SectionHeader title={texts.sectionTrending} onSeeAll={() => useMobileStore.getState().setTab("shop")} />
-        <div className="grid grid-cols-2 gap-2.5">
-          {trending.map((p) => (
-            <ProductCard key={p.id} p={p} onClick={() => push("ProductDetail", { id: p.id })} />
-          ))}
-        </div>
-      </div>
-
+      {/* Recently Viewed - Clean cards */}
       {rvProducts.length > 0 && (
-        <div className="px-3.5 mb-4">
-          <SectionHeader title={texts.sectionRecentlyViewed} onSeeAll={() => push("RecentlyViewed")} />
-          <div className="flex gap-2.5 overflow-x-auto pb-1 -mx-3.5 px-3.5" style={{ scrollbarWidth: "none" }}>
+        <div className="px-4 mt-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Eye size={18} style={{ color: t.text }} />
+            <h2 className="text-[16px] font-bold" style={{ color: t.text }}>{texts.sectionRecentlyViewed}</h2>
+          </div>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-4 px-4" style={{ scrollbarWidth: "none" }}>
             {rvProducts.map((p) => (
-              <div key={p.id} className="w-28 shrink-0">
+              <div key={p.id} className="w-40 shrink-0">
                 <ProductCard p={p} onClick={() => push("ProductDetail", { id: p.id })} />
               </div>
             ))}
           </div>
         </div>
       )}
+
+      {/* Trending - Grid view */}
+      <div className="px-4 mt-8 pb-4">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-[16px] font-bold" style={{ color: t.text }}>{texts.sectionTrending}</h2>
+          <button 
+            onClick={() => useMobileStore.getState().setTab("shop")}
+            className="text-[13px] font-medium flex items-center gap-1"
+            style={{ color: t.primary }}
+          >
+            See all <ChevronRight size={14} />
+          </button>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          {trending.slice(0, 4).map((p) => (
+            <ProductCard key={p.id} p={p} onClick={() => push("ProductDetail", { id: p.id })} />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -1735,40 +1771,30 @@ function SignInScreen() {
     if (!email || !password) { setError("Please enter your email and password"); return; }
     setLoading(true);
     try {
+      // Get stored users from localStorage
+      const storedUsers = JSON.parse(localStorage.getItem("swf_users") || "[]");
+      
       const res = await fetch("/api/auth/signin", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, storedUsers }),
       });
       const data = await res.json();
-      if (!res.ok) {
-        // If user sign-in fails, check if these are admin credentials
-        const adminRes = await fetch("/api/auth/admin-check", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password }),
-        });
-        const adminData = await adminRes.json();
-        if (adminData.isAdmin) {
-          signIn({ id: "admin", name: adminData.name || "Admin", email: adminData.email, joinedAt: new Date().toISOString(), isAdmin: true });
-          useMobileStore.getState().push("AdminPanel");
-          setLoading(false);
-          return;
-        }
-        setError(data.error || "Sign in failed"); setLoading(false); return;
+      if (!res.ok) { 
+        setError(data.error || "Sign in failed"); 
+        setLoading(false); 
+        return; 
       }
-      // Check if this user is also an admin
-      const adminRes = await fetch("/api/auth/admin-check", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password }),
-      });
-      const adminData = await adminRes.json();
-      if (adminData.isAdmin) {
-        data.user.isAdmin = true;
+      
+      // Check if this is admin user
+      if (data.user.id === "admin") {
+        signIn({ ...data.user, isAdmin: true });
+        useMobileStore.getState().push("AdminPanel");
+      } else {
+        signIn(data.user);
+        useMobileStore.getState().setTab("home");
       }
-      signIn(data.user);
-      useMobileStore.getState().setTab("home");
+      setLoading(false);
     } catch {
       setError("Network error. Please try again.");
       setLoading(false);
@@ -1868,6 +1894,16 @@ function SignUpScreen() {
     if (password.length < 6) { setError("Password must be at least 6 characters"); return; }
     setLoading(true);
     try {
+      // Check if user already exists in localStorage
+      const storedUsers = JSON.parse(localStorage.getItem("swf_users") || "[]");
+      const existingUser = storedUsers.find((u: any) => u.email === email.toLowerCase().trim());
+      
+      if (existingUser) {
+        setError("An account with this email already exists");
+        setLoading(false);
+        return;
+      }
+      
       const res = await fetch("/api/auth/signup", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1875,8 +1911,16 @@ function SignUpScreen() {
       });
       const data = await res.json();
       if (!res.ok) { setError(data.error || "Sign up failed"); setLoading(false); return; }
-      signIn(data.user);
+      
+      // Store user in localStorage
+      storedUsers.push(data.user);
+      localStorage.setItem("swf_users", JSON.stringify(storedUsers));
+      
+      // Sign in the user (without password field)
+      const { password: _, ...userWithoutPassword } = data.user;
+      signIn(userWithoutPassword);
       useMobileStore.getState().setTab("home");
+      setLoading(false);
     } catch {
       setError("Network error. Please try again.");
       setLoading(false);
