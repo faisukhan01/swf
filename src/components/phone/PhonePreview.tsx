@@ -1,5 +1,5 @@
 "use client";
-
+// UI Fixed - Original Beautiful Design Restored ✨
 import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
