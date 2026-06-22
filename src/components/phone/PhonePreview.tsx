@@ -2427,10 +2427,31 @@ export function PhonePreview() {
   const hideBottomNav = ["ProductDetail", "Checkout", "OrderSuccess", "Search", "OrderDetail", "RecentlyViewed", "Settings", "WriteReview", "SignIn", "SignUp", "AdminPanel", "AdminBranding", "AdminTexts", "AdminAnalytics"].includes(top.screen);
   const lightStatusText = top.screen === "Home" || top.screen === "Profile" || top.screen === "OrderDetail";
 
+  const [isPWA, setIsPWA] = useState(false);
+
   useEffect(() => {
     if (!configLoaded) loadConfig();
+    
+    // Check if running as installed PWA
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches || 
+                        (window.navigator as any).standalone || 
+                        document.referrer.includes('android-app://');
+    setIsPWA(isStandalone);
   }, [configLoaded, loadConfig]);
 
+  // If PWA mode, render without phone frame
+  if (isPWA) {
+    return (
+      <div className="w-full min-h-screen flex flex-col" style={{ backgroundColor: tokens.bg }}>
+        <div key={top.screen + (top.params?.id ?? "")} className="flex-1 flex flex-col relative overflow-hidden">
+          <CurrentScreen />
+        </div>
+        {!hideBottomNav && <BottomNav />}
+      </div>
+    );
+  }
+
+  // Desktop/browser mode - show with phone frame
   return (
     <div className="relative mx-auto" style={{ width: 320 }}>
       {/* ambient glow */}
