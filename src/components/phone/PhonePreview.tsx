@@ -2105,14 +2105,26 @@ function AdminBrandingScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ appName, tagline, primaryColor: primary, accentColor: accent }),
       });
+      const data = await res.json();
       if (res.ok) {
-        setMsg("Saved! Changes are now live.");
+        // If server indicates to use localStorage, save there
+        if (data.useLocalStorage) {
+          const configData = {
+            appName,
+            tagline,
+            primaryColor: primary,
+            accentColor: accent,
+            timestamp: new Date().toISOString()
+          };
+          localStorage.setItem("swf_admin_config", JSON.stringify(configData));
+        }
+        setMsg("✅ Saved! Changes are now live.");
         loadConfig();
       } else {
-        setMsg("Save failed. Use the full web dashboard.");
+        setMsg("❌ Save failed. Please try again.");
       }
     } catch {
-      setMsg("Network error.");
+      setMsg("❌ Network error. Please try again.");
     }
     setSaving(false);
   };
@@ -2199,15 +2211,20 @@ function AdminTextsScreen() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ texts: allValues }),
       });
+      const data = await res.json();
       if (res.ok) {
-        setMsg("Saved! Changes are now live.");
+        // If server indicates to use localStorage, save there
+        if (data.useLocalStorage) {
+          localStorage.setItem("swf_admin_texts", JSON.stringify(allValues));
+        }
+        setMsg("✅ Saved! Changes are now live.");
         setOverrides({});
         loadConfig();
       } else {
-        setMsg("Save failed. Use the full web dashboard.");
+        setMsg("❌ Save failed. Please try again.");
       }
     } catch {
-      setMsg("Network error.");
+      setMsg("❌ Network error. Please try again.");
     }
     setSaving(false);
   };

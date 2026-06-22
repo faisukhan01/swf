@@ -68,11 +68,35 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
       const res = await fetch("/api/config", { cache: "no-store" });
       if (!res.ok) throw new Error("config fetch failed");
       const data = await res.json();
+      
+      // Check for admin overrides in localStorage
+      let brandOverrides = {};
+      let themeOverrides = {};
+      let textsOverrides = {};
+      
+      try {
+        const adminConfig = localStorage.getItem("swf_admin_config");
+        if (adminConfig) {
+          const parsed = JSON.parse(adminConfig);
+          if (parsed.appName) brandOverrides = { appName: parsed.appName };
+          if (parsed.tagline) brandOverrides = { ...brandOverrides, tagline: parsed.tagline };
+          if (parsed.primaryColor) themeOverrides = { primaryColor: parsed.primaryColor };
+          if (parsed.accentColor) themeOverrides = { ...themeOverrides, accentColor: parsed.accentColor };
+        }
+        
+        const adminTexts = localStorage.getItem("swf_admin_texts");
+        if (adminTexts) {
+          textsOverrides = JSON.parse(adminTexts);
+        }
+      } catch (e) {
+        console.log("No admin overrides in localStorage");
+      }
+      
       set({
-        brand: data.brand ?? defaultBrand,
-        theme: data.theme ?? defaultTheme,
+        brand: { ...(data.brand ?? defaultBrand), ...brandOverrides },
+        theme: { ...(data.theme ?? defaultTheme), ...themeOverrides },
         currency: data.currency ?? "USD",
-        texts: { ...defaultTexts, ...(data.texts ?? {}) },
+        texts: { ...defaultTexts, ...(data.texts ?? {}), ...textsOverrides },
         categories: data.categories ?? defaultCategories,
         products: data.products ?? defaultProducts,
         banners: data.banners ?? defaultBanners,
@@ -80,8 +104,36 @@ export const useConfigStore = create<ConfigState>((set, get) => ({
         loaded: true,
       });
     } catch {
-      // keep defaults; mark loaded so UI doesn't hang
-      set({ loaded: true });
+      // Check localStorage even if API fails
+      let brandOverrides = {};
+      let themeOverrides = {};
+      let textsOverrides = {};
+      
+      try {
+        const adminConfig = localStorage.getItem("swf_admin_config");
+        if (adminConfig) {
+          const parsed = JSON.parse(adminConfig);
+          if (parsed.appName) brandOverrides = { appName: parsed.appName };
+          if (parsed.tagline) brandOverrides = { ...brandOverrides, tagline: parsed.tagline };
+          if (parsed.primaryColor) themeOverrides = { primaryColor: parsed.primaryColor };
+          if (parsed.accentColor) themeOverrides = { ...themeOverrides, accentColor: parsed.accentColor };
+        }
+        
+        const adminTexts = localStorage.getItem("swf_admin_texts");
+        if (adminTexts) {
+          textsOverrides = JSON.parse(adminTexts);
+        }
+      } catch (e) {
+        console.log("No admin overrides in localStorage");
+      }
+      
+      // keep defaults with localStorage overrides; mark loaded so UI doesn't hang
+      set({ 
+        brand: { ...defaultBrand, ...brandOverrides },
+        theme: { ...defaultTheme, ...themeOverrides },
+        texts: { ...defaultTexts, ...textsOverrides },
+        loaded: true 
+      });
     }
   },
 }));
